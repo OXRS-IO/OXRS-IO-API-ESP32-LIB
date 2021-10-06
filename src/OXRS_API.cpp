@@ -6,20 +6,21 @@
 #include "OXRS_API.h"
 #include "bootstrap_html.h"
 
-#include <SPIFFS.h>
-
 // Filename where MQTT settings are persisted on the file system
 static const char * MQTT_JSON_FILENAME = "/mqtt.json";
 
 OXRS_MQTT * _apiMqtt;
 
+// Flag used to trigger a restart
+uint8_t restart = 0;
+
 /* File system helpers */
 void _mountFS()
 {
   Serial.print(F("[api ] mounting SPIFFS..."));
-  if (!SPIFFS.begin(true))
+  if (!SPIFFS.begin())
   { 
-    Serial.println(F("failed"));
+    Serial.println(F("failed, might need formatting?"));
     return; 
   }
   Serial.println(F("done"));
@@ -117,13 +118,13 @@ void _getBootstrap(Request &req, Response &res)
   res.print(BOOTSTRAP_HTML);
 }
 
-void _postReboot(Request &req, Response &res)
+void _postRestart(Request &req, Response &res)
 {
-  Serial.println(F("[api ] /reboot [post]"));
+  Serial.println(F("[api ] /restart [post]"));
 
-  // Restart the device
+  // Schedule a restart
+  restart = 1;
   res.sendStatus(204);
-  ESP.restart();
 }
 
 void _postFactoryReset(Request &req, Response &res)
@@ -151,8 +152,9 @@ void _postFactoryReset(Request &req, Response &res)
     }
   }
 
-  // Restart the device
-  _postReboot(req, res);
+  // Schedule a restart
+  restart = 1;
+  res.sendStatus(204);
 }
 
 void _getMqtt(Request &req, Response &res)
@@ -213,13 +215,33 @@ void OXRS_API::begin()
   _initialiseRestApi();
 }
 
+void OXRS_API::checkEthernet(EthernetClient * client)
+{
+  _checkRestart();
+  
+  if (client->connected()) {
+    _api.process(client);
+    client->stop();
+  }    
+}
+
+void OXRS_API::checkWifi(WiFiClient * client)
+{
+  _checkRestart();
+
+  if (client->connected()) {
+    _api.process(client);
+    client->stop();
+  }    
+}
+
 void OXRS_API::_initialiseRestApi(void)
 {  
   Serial.println(F("[api ] adding / handler [get]"));
   _api.get("/", &_getBootstrap);
   
-  Serial.println(F("[api ] adding /reboot handler [post]"));
-  _api.post("/reboot", &_postReboot);
+  Serial.println(F("[api ] adding /restart handler [post]"));
+  _api.post("/restart", &_postRestart);
 
   Serial.println(F("[api ] adding /factoryReset handler [post]"));
   _api.post("/factoryReset", &_postFactoryReset);
@@ -231,18 +253,11 @@ void OXRS_API::_initialiseRestApi(void)
   _api.post("/mqtt", &_postMqtt);
 }
 
-void OXRS_API::checkEthernet(EthernetClient * client)
+void OXRS_API::_checkRestart(void)
 {
-  if (client->connected()) {
-    _api.process(client);
-    client->stop();
-  }    
-}
-
-void OXRS_API::checkWifi(WiFiClient * client)
-{
-  if (client->connected()) {
-    _api.process(client);
-    client->stop();
-  }    
+  if (restart) 
+  { 
+    Serial.println(F("[api ] restarting..."));
+    ESP.restart(); 
+  }  
 }

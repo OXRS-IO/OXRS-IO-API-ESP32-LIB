@@ -5,12 +5,19 @@
 #ifndef OXRS_API_H
 #define OXRS_API_H
 
-#include <ArduinoJson.h>
-#include <Ethernet.h>
-#include <WiFi.h>
-#include <aWOT.h>
-
 #include <OXRS_MQTT.h>
+#include <ArduinoJson.h>
+#include <aWOT.h>
+#include <Ethernet.h>
+
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <LittleFS.h>
+#define SPIFFS LittleFS
+#else
+#include <WiFi.h>
+#include <SPIFFS.h>
+#endif
 
 class OXRS_API
 {
@@ -26,6 +33,7 @@ class OXRS_API
     Application _api;
 
     void _initialiseRestApi(void);
+    void _checkRestart(void);
 };
 
 #endif
