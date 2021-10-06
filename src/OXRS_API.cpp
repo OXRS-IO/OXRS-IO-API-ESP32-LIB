@@ -37,7 +37,7 @@ boolean _formatFS()
   return true;
 }
 
-boolean _loadJson(DynamicJsonDocument * json, const char * filename)
+boolean _readJson(DynamicJsonDocument * json, const char * filename)
 {
   Serial.print(F("[api ] reading "));  
   Serial.print(filename);
@@ -52,7 +52,7 @@ boolean _loadJson(DynamicJsonDocument * json, const char * filename)
   
   if (file.size() == 0)
   {
-    Serial.println(F("empty"));
+    Serial.println(F("not found"));
     return false;
   }
 
@@ -64,13 +64,16 @@ boolean _loadJson(DynamicJsonDocument * json, const char * filename)
   {
     Serial.print(F("[api ] failed to deserialise JSON: "));
     Serial.println(error.f_str());
+
+    file.close();
     return false;
   }
   
+  file.close();
   return json->isNull() ? false : true;
 }
 
-boolean _saveJson(DynamicJsonDocument * json, const char * filename)
+boolean _writeJson(DynamicJsonDocument * json, const char * filename)
 {
   Serial.print(F("[api ] writing "));
   Serial.print(filename);
@@ -85,6 +88,8 @@ boolean _saveJson(DynamicJsonDocument * json, const char * filename)
 
   Serial.print(serializeJson(*json, file));
   Serial.println(F(" bytes written"));
+
+  file.close();
   return true;
 }
 
@@ -174,7 +179,7 @@ void _postMqtt(Request &req, Response &res)
   _apiMqtt->setJson(&mqtt);
   _apiMqtt->reconnect();
   
-  if (!_saveJson(&json, MQTT_JSON_FILENAME))
+  if (!_writeJson(&json, MQTT_JSON_FILENAME))
   {
     res.sendStatus(500);
   }
@@ -196,7 +201,7 @@ void OXRS_API::begin()
 
   // Restore any persisted MQTT settings
   DynamicJsonDocument json(2048);
-  if (_loadJson(&json, MQTT_JSON_FILENAME))
+  if (_readJson(&json, MQTT_JSON_FILENAME))
   {
     Serial.print(F("[api ] restore MQTT settings from file..."));
     JsonObject mqtt = json.as<JsonObject>();
