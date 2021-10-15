@@ -30,7 +30,7 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
       input { display: inline-block; width: 49%; }
     }
 
-    button { width: 100%; padding: 0.5em; cursor: pointer; }
+    button { width: 100%; margin-bottom: 1em; padding: 0.5em; border-radius: .4em; cursor: pointer; }
 
     #state-text { background-color: grey; margin: 1em 0; padding: .25em .6em; border-radius: .4em; font-weight: bold; text-align: center; }
   </style>
@@ -63,7 +63,9 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
   <label for="mqtt-topic-suffix">Topic Suffix:</label>
   <input type="text" name="topicSuffix" id="mqtt-topic-suffix">
 
-  <button type="submit">Submit</button>
+  <button id="submit" type="submit">Submit</button>
+  <button id="factoryReset" type="button" disabled>Factory Reset</button>
+  <button id="factoryResetFormat" type="button" disabled>Format SPIFFS</button>
 
 </form>
 
@@ -89,7 +91,7 @@ function scheduleUpdateMqttConnectionStatus(time)
   // Reschedule the timer
   updateMqttConnectionStatusTimer = setTimeout(function ()
   { 
-    updateMqttConnectionStatus();
+    checkMqttConnectionStatus();
   }, time);
 }
 
@@ -176,7 +178,38 @@ function handleFormSubmit(event)
   scheduleUpdateMqttConnectionStatus(500);
 }
 
-function updateMqttConnectionStatus()
+function handleFormFactoryReset(format)
+{
+  if (!confirm('Are you sure you want to factory reset this device?'))
+    return false;
+  
+  fetch('/factoryReset',
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({formatFileSystem: format})
+  })
+    .then(response =>
+    {
+      if (!response.ok) 
+        throw new Error("Device response was not ok");
+    })
+    .catch(error =>
+    {
+      handleError(error);
+      return false;
+    });
+  
+  // Clear the input form
+  document.getElementById("mqtt-form").reset();
+
+  // Force update connection status to OFFLINE
+  setMqttConnectionOffline();
+}
+
+function checkMqttConnectionStatus()
 {
   fetch('/mqtt')
     .then(response =>
@@ -188,22 +221,51 @@ function updateMqttConnectionStatus()
     })
     .then(data =>
     {
-      if (data.connected === true)
+      if (document.getElementById("mqtt-clientid").value == "")
       {
-        document.getElementById("state-text").style.background = "green";
-        document.getElementById("state-text").innerHTML = "MQTT CONNECTED";
+        document.getElementById("mqtt-clientid").value = data.clientId;
       }
-      else
-      {
-        document.getElementById("state-text").style.background = "orange";
-        document.getElementById("state-text").innerHTML = "MQTT DISCONNECTED";
-      }
+      
+      setMqttConnectionStatus(data.connected);
     })
     .catch(error =>
     {
-      document.getElementById("state-text").style.background = "red";
-      document.getElementById("state-text").innerHTML = "OFFLINE";
+      setMqttConnectionOffline();
     });
+}
+
+function setMqttConnectionStatus(connected)
+{
+  if (connected === true)
+  {
+    document.getElementById("state-text").style.background = "green";
+    document.getElementById("state-text").innerHTML = "MQTT CONNECTED";
+
+    document.getElementById("factoryReset").removeAttribute("disabled");
+  }
+  else
+  {
+    document.getElementById("state-text").style.background = "orange";
+    document.getElementById("state-text").innerHTML = "MQTT DISCONNECTED";
+
+    document.getElementById("factoryReset").setAttribute("disabled", true);
+  }
+
+  document.getElementById("submit").removeAttribute("disabled");
+  document.getElementById("factoryResetFormat").removeAttribute("disabled");
+
+  // Reschedule a connection status check every 5 secs
+  scheduleUpdateMqttConnectionStatus(5000);
+}
+
+function setMqttConnectionOffline()
+{
+  document.getElementById("state-text").style.background = "red";
+  document.getElementById("state-text").innerHTML = "OFFLINE";
+
+  document.getElementById("submit").setAttribute("disabled", true);
+  document.getElementById("factoryReset").setAttribute("disabled", true);
+  document.getElementById("factoryResetFormat").setAttribute("disabled", true);
 
   // Reschedule a connection status check every 5 secs
   scheduleUpdateMqttConnectionStatus(5000);
@@ -211,6 +273,12 @@ function updateMqttConnectionStatus()
 
 const mqttForm = document.getElementById("mqtt-form");
 mqttForm.addEventListener("submit", handleFormSubmit);
+
+const factoryResetButton = document.getElementById("factoryReset");
+factoryResetButton.addEventListener("click", function(){ handleFormFactoryReset(false); });
+
+const factoryResetFormatButton = document.getElementById("factoryResetFormat");
+factoryResetFormatButton.addEventListener("click", function(){ handleFormFactoryReset(true); });
 
 const mqttUsername = document.getElementById('mqtt-username');
 mqttUsername.addEventListener('keyup', (event) =>
