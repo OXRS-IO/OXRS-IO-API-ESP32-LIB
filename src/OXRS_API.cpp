@@ -162,12 +162,10 @@ void _getMqtt(Request &req, Response &res)
   Serial.println(F("[api ] /mqtt [get]"));
 
   DynamicJsonDocument json(2048);
-  
-  JsonObject mqtt = json.createNestedObject("mqtt");
-  _apiMqtt->getJson(&mqtt);
-  
+  _apiMqtt->getJson(json.as<JsonVariant>());
+
   res.set("Content-Type", "application/json");
-  serializeJson(mqtt, res);
+  serializeJson(json, res);
 }
 
 void _postMqtt(Request &req, Response &res)
@@ -177,8 +175,7 @@ void _postMqtt(Request &req, Response &res)
   DynamicJsonDocument json(2048);
   deserializeJson(json, req);
 
-  JsonObject mqtt = json.as<JsonObject>();
-  _apiMqtt->setJson(&mqtt);
+  _apiMqtt->setJson(json.as<JsonVariant>());
   _apiMqtt->reconnect();
   
   if (!_writeJson(&json, MQTT_JSON_FILENAME))
@@ -206,8 +203,7 @@ void OXRS_API::begin()
   if (_readJson(&json, MQTT_JSON_FILENAME))
   {
     Serial.print(F("[api ] restore MQTT settings from file..."));
-    JsonObject mqtt = json.as<JsonObject>();
-    _apiMqtt->setJson(&mqtt);
+    _apiMqtt->setJson(json.as<JsonVariant>());
     Serial.println(F("done"));
   }
   
