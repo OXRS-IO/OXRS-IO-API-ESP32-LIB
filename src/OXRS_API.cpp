@@ -123,7 +123,6 @@ void _postRestart(Request &req, Response &res)
 {
   Serial.println(F("[api ] /restart [post]"));
 
-  // Schedule a restart
   restart = 1;
   res.sendStatus(204);
 }
@@ -132,28 +131,12 @@ void _postFactoryReset(Request &req, Response &res)
 {
   Serial.println(F("[api ] /factoryReset [post]"));
 
-  DynamicJsonDocument json(64);
-  deserializeJson(json, req);
-  
-  // Factory reset - either wiping setup/config data only or format file system
-  if (json.isNull() || !json["formatFileSystem"].as<boolean>())
+  if (!_formatFS())
   {
-    if (!_deleteFile(MQTT_JSON_FILENAME))
-    {
-      res.sendStatus(500);
-      return;
-    }
-  }
-  else
-  {
-    if (!_formatFS())
-    {
-      res.sendStatus(500);
-      return;
-    }
+    res.sendStatus(500);
+    return;
   }
 
-  // Schedule a restart
   restart = 1;
   res.sendStatus(204);
 }
