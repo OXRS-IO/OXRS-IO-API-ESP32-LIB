@@ -15,15 +15,16 @@ OXRS_MQTT * _apiMqtt;
 uint8_t restart = 0;
 
 /* File system helpers */
-void _mountFS()
+boolean _mountFS()
 {
   Serial.print(F("[api ] mounting SPIFFS..."));
   if (!SPIFFS.begin())
   { 
-    Serial.println(F("failed, might need formatting?"));
-    return; 
+    Serial.println(F("failed"));
+    return false; 
   }
   Serial.println(F("done"));
+  return true;
 }
 
 boolean _formatFS()
@@ -196,7 +197,10 @@ OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
 void OXRS_API::begin()
 {
   // Mount the file system
-  _mountFS();
+  if (!_mountFS())
+  {
+    _formatFS();
+  }
 
   // Restore any persisted MQTT settings
   DynamicJsonDocument json(2048);
