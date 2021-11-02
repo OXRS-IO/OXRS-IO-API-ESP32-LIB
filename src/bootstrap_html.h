@@ -64,8 +64,8 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
   <input type="text" name="topicSuffix" id="mqtt-topic-suffix">
 
   <button id="submit" type="submit">Submit</button>
+  <button id="restart" type="button" disabled>Restart</button>
   <button id="factoryReset" type="button" disabled>Factory Reset</button>
-  <button id="factoryResetFormat" type="button" disabled>Format SPIFFS</button>
 
 </form>
 
@@ -178,7 +178,34 @@ function handleFormSubmit(event)
   scheduleUpdateMqttConnectionStatus(500);
 }
 
-function handleFormFactoryReset(format)
+function handleFormRestart()
+{
+  if (!confirm('Are you sure you want to restart this device?'))
+    return false;
+  
+  fetch('/restart',
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+    .then(response =>
+    {
+      if (!response.ok) 
+        throw new Error("Device response was not ok");
+    })
+    .catch(error =>
+    {
+      handleError(error);
+      return false;
+    });
+  
+  // Force update connection status to OFFLINE
+  setMqttConnectionOffline();
+}
+
+function handleFormFactoryReset()
 {
   if (!confirm('Are you sure you want to factory reset this device?'))
     return false;
@@ -188,8 +215,7 @@ function handleFormFactoryReset(format)
     method: "POST",
     headers: {
       "Content-Type": "application/json"
-    },
-    body: JSON.stringify({formatFileSystem: format})
+    }
   })
     .then(response =>
     {
@@ -240,19 +266,16 @@ function setMqttConnectionStatus(connected)
   {
     document.getElementById("state-text").style.background = "green";
     document.getElementById("state-text").innerHTML = "MQTT CONNECTED";
-
-    document.getElementById("factoryReset").removeAttribute("disabled");
   }
   else
   {
     document.getElementById("state-text").style.background = "orange";
     document.getElementById("state-text").innerHTML = "MQTT DISCONNECTED";
-
-    document.getElementById("factoryReset").setAttribute("disabled", true);
   }
 
   document.getElementById("submit").removeAttribute("disabled");
-  document.getElementById("factoryResetFormat").removeAttribute("disabled");
+  document.getElementById("restart").removeAttribute("disabled");
+  document.getElementById("factoryReset").removeAttribute("disabled");
 
   // Reschedule a connection status check every 5 secs
   scheduleUpdateMqttConnectionStatus(5000);
@@ -264,8 +287,8 @@ function setMqttConnectionOffline()
   document.getElementById("state-text").innerHTML = "OFFLINE";
 
   document.getElementById("submit").setAttribute("disabled", true);
+  document.getElementById("restart").setAttribute("disabled", true);
   document.getElementById("factoryReset").setAttribute("disabled", true);
-  document.getElementById("factoryResetFormat").setAttribute("disabled", true);
 
   // Reschedule a connection status check every 5 secs
   scheduleUpdateMqttConnectionStatus(5000);
@@ -274,11 +297,11 @@ function setMqttConnectionOffline()
 const mqttForm = document.getElementById("mqtt-form");
 mqttForm.addEventListener("submit", handleFormSubmit);
 
-const factoryResetButton = document.getElementById("factoryReset");
-factoryResetButton.addEventListener("click", function(){ handleFormFactoryReset(false); });
+const restartButton = document.getElementById("restart");
+restartButton.addEventListener("click", handleFormRestart);
 
-const factoryResetFormatButton = document.getElementById("factoryResetFormat");
-factoryResetFormatButton.addEventListener("click", function(){ handleFormFactoryReset(true); });
+const factoryResetButton = document.getElementById("factoryReset");
+factoryResetButton.addEventListener("click", handleFormFactoryReset);
 
 const mqttUsername = document.getElementById('mqtt-username');
 mqttUsername.addEventListener('keyup', (event) =>
