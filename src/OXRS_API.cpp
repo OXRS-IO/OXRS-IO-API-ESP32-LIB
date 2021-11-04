@@ -6,8 +6,11 @@
 #include "OXRS_API.h"
 #include "bootstrap_html.h"
 
-// Filename where MQTT settings are persisted on the file system
-static const char * MQTT_JSON_FILENAME = "/mqtt.json";
+// Filename where MQTT config are persisted on the file system
+static const char * MQTT_CONFIG_FILENAME = "/mqtt.json";
+
+// Filename where device config is persisted on the file system
+static const char * DEVICE_CONFIG_FILENAME = "/deviceConfig.json";
 
 OXRS_MQTT * _apiMqtt;
 
@@ -141,28 +144,47 @@ void _postFactoryReset(Request &req, Response &res)
   res.sendStatus(204);
 }
 
-void _getMqtt(Request &req, Response &res)
+void _getMqttConfig(Request &req, Response &res)
 {
   Serial.println(F("[api ] /mqtt [get]"));
 
   DynamicJsonDocument json(2048);
-  _apiMqtt->getJson(json.as<JsonVariant>());
+  _apiMqtt->getMqttConfig(json.as<JsonVariant>());
 
   res.set("Content-Type", "application/json");
   serializeJson(json, res);
 }
 
-void _postMqtt(Request &req, Response &res)
+void _postMqttConfig(Request &req, Response &res)
 {
   Serial.println(F("[api ] /mqtt [post]"));
 
   DynamicJsonDocument json(2048);
   deserializeJson(json, req);
 
-  _apiMqtt->setJson(json.as<JsonVariant>());
+  _apiMqtt->setMqttConfig(json.as<JsonVariant>());
   _apiMqtt->reconnect();
   
-  if (!_writeJson(&json, MQTT_JSON_FILENAME))
+  if (!_writeJson(&json, MQTT_CONFIG_FILENAME))
+  {
+    res.sendStatus(500);
+  }
+  else
+  {
+    res.sendStatus(204);
+  }    
+}
+
+void _postDeviceConfig(Request &req, Response &res)
+{
+  Serial.println(F("[api ] /deviceConfig [post]"));
+
+  DynamicJsonDocument json(4096);
+  deserializeJson(json, req);
+
+  _apiMqtt->setDeviceConfig(json.as<JsonVariant>());
+  
+  if (!_writeJson(&json, DEVICE_CONFIG_FILENAME))
   {
     res.sendStatus(500);
   }
@@ -185,12 +207,21 @@ void OXRS_API::begin()
     _formatFS();
   }
 
-  // Restore any persisted MQTT settings
-  DynamicJsonDocument json(2048);
-  if (_readJson(&json, MQTT_JSON_FILENAME))
+  DynamicJsonDocument json(4096);
+
+  // Restore any persisted MQTT config
+  if (_readJson(&json, MQTT_CONFIG_FILENAME))
   {
-    Serial.print(F("[api ] restore MQTT settings from file..."));
-    _apiMqtt->setJson(json.as<JsonVariant>());
+    Serial.print(F("[api ] restore MQTT config from SPIFFS..."));
+    _apiMqtt->setMqttConfig(json.as<JsonVariant>());
+    Serial.println(F("done"));
+  }
+  
+  // Restore any persisted device config
+  if (_readJson(&json, DEVICE_CONFIG_FILENAME))
+  {
+    Serial.print(F("[api ] restore device config from SPIFFS..."));
+    _apiMqtt->setDeviceConfig(json.as<JsonVariant>());
     Serial.println(F("done"));
   }
   
@@ -230,10 +261,13 @@ void OXRS_API::_initialiseRestApi(void)
   _api.post("/factoryReset", &_postFactoryReset);
 
   Serial.println(F("[api ] adding /mqtt handler [get]"));
-  _api.get("/mqtt", &_getMqtt);
+  _api.get("/mqtt", &_getMqttConfig);
 
   Serial.println(F("[api ] adding /mqtt handler [post]"));
-  _api.post("/mqtt", &_postMqtt);
+  _api.post("/mqtt", &_postMqttConfig);
+
+  Serial.println(F("[api ] adding /deviceConfig handler [post]"));
+  _api.post("/deviceConfig", &_postDeviceConfig);
 }
 
 void OXRS_API::_checkRestart(void)
