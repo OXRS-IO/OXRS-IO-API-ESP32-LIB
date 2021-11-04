@@ -204,7 +204,9 @@ void OXRS_API::begin()
   // Mount the file system
   if (!_mountFS())
   {
+    // Format and re-mount if mount fails - should only happen on first boot
     _formatFS();
+    _mountFS();
   }
 
   DynamicJsonDocument json(4096);
