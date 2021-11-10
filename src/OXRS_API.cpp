@@ -20,56 +20,27 @@ uint8_t restart = 0;
 /* File system helpers */
 boolean _mountFS()
 {
-  Serial.print(F("[api ] mounting SPIFFS..."));
-  if (!SPIFFS.begin())
-  { 
-    Serial.println(F("failed"));
-    return false; 
-  }
-  Serial.println(F("done"));
-  return true;
+  return SPIFFS.begin();
 }
 
 boolean _formatFS()
 {
-  Serial.print(F("[api ] formatting SPIFFS..."));
-  if (!SPIFFS.format())
-  { 
-    Serial.println(F("failed"));
-    return false; 
-  }
-  Serial.println(F("done"));
-  return true;
+  return SPIFFS.format();
 }
 
 boolean _readJson(DynamicJsonDocument * json, const char * filename)
 {
-  Serial.print(F("[api ] reading "));  
-  Serial.print(filename);
-  Serial.print(F("..."));
-
   File file = SPIFFS.open(filename, "r");
+
   if (!file) 
-  {
-    Serial.println(F("failed to open file"));
     return false;
-  }
   
   if (file.size() == 0)
-  {
-    Serial.println(F("not found"));
     return false;
-  }
-
-  Serial.print(file.size());
-  Serial.println(F(" bytes read"));
   
   DeserializationError error = deserializeJson(*json, file);
   if (error) 
   {
-    Serial.print(F("[api ] failed to deserialise JSON: "));
-    Serial.println(error.f_str());
-
     file.close();
     return false;
   }
@@ -80,19 +51,12 @@ boolean _readJson(DynamicJsonDocument * json, const char * filename)
 
 boolean _writeJson(DynamicJsonDocument * json, const char * filename)
 {
-  Serial.print(F("[api ] writing "));
-  Serial.print(filename);
-  Serial.print(F("..."));
-
   File file = SPIFFS.open(filename, "w");
-  if (!file) 
-  {
-    Serial.println(F("failed to open file"));
-    return false;
-  }
 
-  Serial.print(serializeJson(*json, file));
-  Serial.println(F(" bytes written"));
+  if (!file) 
+    return false;
+
+  serializeJson(*json, file);
 
   file.close();
   return true;
@@ -100,40 +64,23 @@ boolean _writeJson(DynamicJsonDocument * json, const char * filename)
 
 boolean _deleteFile(const char * filename)
 {
-  Serial.print(F("[api ] deleting "));
-  Serial.print(filename);
-  Serial.print(F("..."));
-
-  if (!SPIFFS.remove(filename))
-  {
-    Serial.println(F("failed to delete file"));
-    return false;
-  }
-
-  Serial.println(F("done"));
-  return true;
+  return SPIFFS.remove(filename);
 }
 
 void _getBootstrap(Request &req, Response &res)
 {
-  Serial.println(F("[api ] / [get]"));
-
   res.set("Content-Type", "text/html");
   res.print(BOOTSTRAP_HTML);
 }
 
 void _postRestart(Request &req, Response &res)
 {
-  Serial.println(F("[api ] /restart [post]"));
-
   restart = 1;
   res.sendStatus(204);
 }
 
 void _postFactoryReset(Request &req, Response &res)
 {
-  Serial.println(F("[api ] /factoryReset [post]"));
-
   if (!_formatFS())
   {
     res.sendStatus(500);
@@ -146,8 +93,6 @@ void _postFactoryReset(Request &req, Response &res)
 
 void _getMqttConfig(Request &req, Response &res)
 {
-  Serial.println(F("[api ] /mqtt [get]"));
-
   DynamicJsonDocument json(2048);
   _apiMqtt->getMqttConfig(json.as<JsonVariant>());
 
@@ -157,8 +102,6 @@ void _getMqttConfig(Request &req, Response &res)
 
 void _postMqttConfig(Request &req, Response &res)
 {
-  Serial.println(F("[api ] /mqtt [post]"));
-
   DynamicJsonDocument json(2048);
   deserializeJson(json, req);
 
@@ -177,8 +120,6 @@ void _postMqttConfig(Request &req, Response &res)
 
 void _postDeviceConfig(Request &req, Response &res)
 {
-  Serial.println(F("[api ] /deviceConfig [post]"));
-
   DynamicJsonDocument json(4096);
   deserializeJson(json, req);
 
@@ -214,17 +155,13 @@ void OXRS_API::begin()
   // Restore any persisted MQTT config
   if (_readJson(&json, MQTT_CONFIG_FILENAME))
   {
-    Serial.print(F("[api ] restore MQTT config from SPIFFS..."));
     _apiMqtt->setMqttConfig(json.as<JsonVariant>());
-    Serial.println(F("done"));
   }
   
   // Restore any persisted device config
   if (_readJson(&json, DEVICE_CONFIG_FILENAME))
   {
-    Serial.print(F("[api ] restore device config from SPIFFS..."));
     _apiMqtt->setDeviceConfig(json.as<JsonVariant>());
-    Serial.println(F("done"));
   }
   
   // Initialise the REST API endpoints
@@ -253,30 +190,15 @@ void OXRS_API::checkWifi(WiFiClient * client)
 
 void OXRS_API::_initialiseRestApi(void)
 {  
-  Serial.println(F("[api ] adding / handler [get]"));
   _api.get("/", &_getBootstrap);
-  
-  Serial.println(F("[api ] adding /restart handler [post]"));
   _api.post("/restart", &_postRestart);
-
-  Serial.println(F("[api ] adding /factoryReset handler [post]"));
   _api.post("/factoryReset", &_postFactoryReset);
-
-  Serial.println(F("[api ] adding /mqtt handler [get]"));
   _api.get("/mqtt", &_getMqttConfig);
-
-  Serial.println(F("[api ] adding /mqtt handler [post]"));
   _api.post("/mqtt", &_postMqttConfig);
-
-  Serial.println(F("[api ] adding /deviceConfig handler [post]"));
   _api.post("/deviceConfig", &_postDeviceConfig);
 }
 
 void OXRS_API::_checkRestart(void)
 {
-  if (restart) 
-  { 
-    Serial.println(F("[api ] restarting..."));
-    ESP.restart(); 
-  }  
+  if (restart) { ESP.restart(); }  
 }
