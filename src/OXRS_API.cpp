@@ -6,11 +6,11 @@
 #include "OXRS_API.h"
 #include "bootstrap_html.h"
 
-// Filename where MQTT config are persisted on the file system
-static const char * MQTT_CONFIG_FILENAME = "/mqtt.json";
+// Filename where MQTT connection properties are persisted on the file system
+static const char * MQTT_FILENAME = "/mqtt.json";
 
-// Filename where device config is persisted on the file system
-static const char * DEVICE_CONFIG_FILENAME = "/deviceConfig.json";
+// Filename where config is persisted on the file system
+static const char * CONFIG_FILENAME = "/config.json";
 
 OXRS_MQTT * _apiMqtt;
 
@@ -26,6 +26,60 @@ boolean _mountFS()
 boolean _formatFS()
 {
   return SPIFFS.format();
+}
+
+void _setMqtt(JsonVariant json)
+{
+  // broker is mandatory so don't clear if not explicitly specified
+  if (json.containsKey("broker"))
+  { 
+    if (json.containsKey("port"))
+    { 
+      _apiMqtt->setBroker(json["broker"], json["port"].as<uint16_t>());
+    }
+    else
+    {
+      _apiMqtt->setBroker(json["broker"], MQTT_DEFAULT_PORT);
+    }
+  }
+  
+  // client id is mandatory so don't clear if not explicitly specified
+  if (json.containsKey("clientId"))
+  { 
+    _apiMqtt->setClientId(json["clientId"]);
+  }
+  
+  if (json.containsKey("username") && json.containsKey("password"))
+  { 
+    _apiMqtt->setAuth(json["username"], json["password"]);
+  }
+  else
+  {
+    _apiMqtt->setAuth(NULL, NULL);
+  }
+  
+  if (json.containsKey("topicPrefix"))
+  { 
+    _apiMqtt->setTopicPrefix(json["topicPrefix"]);
+  }
+  else
+  {
+    _apiMqtt->setTopicPrefix(NULL);
+  }
+
+  if (json.containsKey("topicSuffix"))
+  { 
+    _apiMqtt->setTopicSuffix(json["topicSuffix"]);
+  }
+  else
+  {
+    _apiMqtt->setTopicSuffix(NULL);
+  }
+}
+
+void _setConfig(JsonVariant json)
+{
+  _apiMqtt->setConfig(json);  
 }
 
 boolean _readJson(DynamicJsonDocument * json, const char * filename)
@@ -91,11 +145,11 @@ void _postFactoryReset(Request &req, Response &res)
   res.sendStatus(204);
 }
 
-void _getMqttConfig(Request &req, Response &res)
+void _getMqtt(Request &req, Response &res)
 {
   DynamicJsonDocument json(2048);  
 
-  if (!_readJson(&json, MQTT_CONFIG_FILENAME))
+  if (!_readJson(&json, MQTT_FILENAME))
   {
     // if no persisted config still return the client id
     json["clientId"] = _apiMqtt->getClientId();
@@ -129,29 +183,28 @@ void _getMqttConfig(Request &req, Response &res)
   serializeJson(json, res);
 }
 
-void _postMqttConfig(Request &req, Response &res)
+void _postMqtt(Request &req, Response &res)
 {
   DynamicJsonDocument json(2048);
   deserializeJson(json, req);
 
-  _apiMqtt->setMqttConfig(json.as<JsonVariant>());
-  _apiMqtt->reconnect();
-  
-  if (!_writeJson(&json, MQTT_CONFIG_FILENAME))
+  if (!_writeJson(&json, MQTT_FILENAME))
   {
     res.sendStatus(500);
+    return;
   }
-  else
-  {
-    res.sendStatus(204);
-  }    
+
+  _setMqtt(json.as<JsonVariant>());
+  _apiMqtt->reconnect();
+
+  res.sendStatus(204);
 }
 
-void _getDeviceConfig(Request &req, Response &res)
+void _getConfig(Request &req, Response &res)
 {
   DynamicJsonDocument json(4096);
   
-  if (!_readJson(&json, DEVICE_CONFIG_FILENAME))
+  if (!_readJson(&json, CONFIG_FILENAME))
   {
     res.sendStatus(404);
     return;
@@ -161,21 +214,20 @@ void _getDeviceConfig(Request &req, Response &res)
   serializeJson(json, res);
 }
 
-void _postDeviceConfig(Request &req, Response &res)
+void _postConfig(Request &req, Response &res)
 {
   DynamicJsonDocument json(4096);
   deserializeJson(json, req);
-
-  _apiMqtt->setDeviceConfig(json.as<JsonVariant>());
   
-  if (!_writeJson(&json, DEVICE_CONFIG_FILENAME))
+  if (!_writeJson(&json, CONFIG_FILENAME))
   {
     res.sendStatus(500);
+    return;
   }
-  else
-  {
-    res.sendStatus(204);
-  }    
+
+  _setConfig(json.as<JsonVariant>());
+
+  res.sendStatus(204);
 }
 
 OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
@@ -193,14 +245,14 @@ void OXRS_API::begin()
 
   DynamicJsonDocument json(4096);
 
-  if (_readJson(&json, MQTT_CONFIG_FILENAME))
+  if (_readJson(&json, MQTT_FILENAME))
   {
-    _apiMqtt->setMqttConfig(json.as<JsonVariant>());
+    _setMqtt(json.as<JsonVariant>());
   }
   
-  if (_readJson(&json, DEVICE_CONFIG_FILENAME))
+  if (_readJson(&json, CONFIG_FILENAME))
   {
-    _apiMqtt->setDeviceConfig(json.as<JsonVariant>());
+    _setConfig(json.as<JsonVariant>());
   }
   
   _initialiseRestApi();
@@ -233,11 +285,11 @@ void OXRS_API::_initialiseRestApi(void)
   _api.post("/restart", &_postRestart);
   _api.post("/factoryReset", &_postFactoryReset);
 
-  _api.get("/mqtt", &_getMqttConfig);
-  _api.post("/mqtt", &_postMqttConfig);
+  _api.get("/mqtt", &_getMqtt);
+  _api.post("/mqtt", &_postMqtt);
 
-  _api.get("/deviceConfig", &_getDeviceConfig);
-  _api.post("/deviceConfig", &_postDeviceConfig);
+  _api.get("/config", &_getConfig);
+  _api.post("/config", &_postConfig);
 }
 
 void OXRS_API::_checkRestart(void)
