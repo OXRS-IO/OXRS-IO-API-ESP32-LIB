@@ -93,9 +93,38 @@ void _postFactoryReset(Request &req, Response &res)
 
 void _getMqttConfig(Request &req, Response &res)
 {
-  DynamicJsonDocument json(2048);
-  _apiMqtt->getMqttConfig(json.as<JsonVariant>());
+  DynamicJsonDocument json(2048);  
 
+  if (!_readJson(&json, MQTT_CONFIG_FILENAME))
+  {
+    // if no persisted config still return the client id
+    json["clientId"] = _apiMqtt->getClientId();
+  }
+  else
+  {
+    // remove any sensitive config
+    json.remove("password");
+  }
+
+  // always return the connected state
+  json["connected"] = _apiMqtt->connected();
+  
+  // if we are connected then add the various MQTT topics
+  if (_apiMqtt->connected())
+  {
+    JsonObject topics = json.createNestedObject("topics");
+    char topic[64];
+    
+    topics["lwt"] = _apiMqtt->getLwtTopic(topic);
+    topics["adopt"] = _apiMqtt->getAdoptTopic(topic);
+
+    topics["config"] = _apiMqtt->getConfigTopic(topic);
+    topics["command"] = _apiMqtt->getCommandTopic(topic);
+
+    topics["status"] = _apiMqtt->getStatusTopic(topic);
+    topics["telemetry"] = _apiMqtt->getTelemetryTopic(topic);    
+  }
+  
   res.set("Content-Type", "application/json");
   serializeJson(json, res);
 }
@@ -116,6 +145,20 @@ void _postMqttConfig(Request &req, Response &res)
   {
     res.sendStatus(204);
   }    
+}
+
+void _getDeviceConfig(Request &req, Response &res)
+{
+  DynamicJsonDocument json(4096);
+  
+  if (!_readJson(&json, DEVICE_CONFIG_FILENAME))
+  {
+    res.sendStatus(404);
+    return;
+  }
+
+  res.set("Content-Type", "application/json");
+  serializeJson(json, res);
 }
 
 void _postDeviceConfig(Request &req, Response &res)
@@ -142,29 +185,24 @@ OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
 
 void OXRS_API::begin()
 {
-  // Mount the file system
   if (!_mountFS())
   {
-    // Format and re-mount if mount fails - should only happen on first boot
     _formatFS();
     _mountFS();
   }
 
   DynamicJsonDocument json(4096);
 
-  // Restore any persisted MQTT config
   if (_readJson(&json, MQTT_CONFIG_FILENAME))
   {
     _apiMqtt->setMqttConfig(json.as<JsonVariant>());
   }
   
-  // Restore any persisted device config
   if (_readJson(&json, DEVICE_CONFIG_FILENAME))
   {
     _apiMqtt->setDeviceConfig(json.as<JsonVariant>());
   }
   
-  // Initialise the REST API endpoints
   _initialiseRestApi();
 }
 
@@ -191,10 +229,14 @@ void OXRS_API::checkWifi(WiFiClient * client)
 void OXRS_API::_initialiseRestApi(void)
 {  
   _api.get("/", &_getBootstrap);
+
   _api.post("/restart", &_postRestart);
   _api.post("/factoryReset", &_postFactoryReset);
+
   _api.get("/mqtt", &_getMqttConfig);
   _api.post("/mqtt", &_postMqttConfig);
+
+  _api.get("/deviceConfig", &_getDeviceConfig);
   _api.post("/deviceConfig", &_postDeviceConfig);
 }
 

@@ -118,12 +118,12 @@ function handleBodyLoad()
     })
     .then(data =>
     {
-      document.getElementById('mqtt-broker').value = data.broker;
-      document.getElementById('mqtt-port').value = data.port;
-      document.getElementById('mqtt-clientid').value = data.clientId;
-      document.getElementById('mqtt-username').value = data.username;
-      document.getElementById('mqtt-topic-prefix').value = data.topicPrefix;
-      document.getElementById('mqtt-topic-suffix').value = data.topicSuffix;
+      if ('broker' in data)      { document.getElementById('mqtt-broker').value = data.broker; }
+      if ('port' in data)        { document.getElementById('mqtt-port').value = data.port; }
+      if ('clientid' in data)    { document.getElementById('mqtt-clientid').value = data.clientId; }
+      if ('username' in data)    { document.getElementById('mqtt-username').value = data.username; }
+      if ('topicPrefix' in data) { document.getElementById('mqtt-topic-prefix').value = data.topicPrefix; }
+      if ('topicSuffix' in data) { document.getElementById('mqtt-topic-suffix').value = data.topicSuffix; }
 
       // Trigger the username keyup event to ensure the password field
       // is enabled/disabled based on what we have loaded above
