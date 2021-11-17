@@ -5,6 +5,7 @@
 #include "Arduino.h"
 #include "OXRS_API.h"
 #include "bootstrap_html.h"
+#include "ota_html.h"
 
 // Filename where MQTT connection properties are persisted on the file system
 static const char * MQTT_FILENAME = "/mqtt.json";
@@ -14,8 +15,11 @@ static const char * CONFIG_FILENAME = "/config.json";
 
 OXRS_MQTT * _apiMqtt;
 
+// Expect header buffer
+char expectHeader[20] {};
+
 // Flag used to trigger a restart
-uint8_t restart = 0;
+boolean restart = false;
 
 /* File system helpers */
 boolean _mountFS()
@@ -129,7 +133,7 @@ void _getBootstrap(Request &req, Response &res)
 
 void _postRestart(Request &req, Response &res)
 {
-  restart = 1;
+  restart = true;
   res.sendStatus(204);
 }
 
@@ -141,7 +145,7 @@ void _postFactoryReset(Request &req, Response &res)
     return;
   }
 
-  restart = 1;
+  restart = true;
   res.sendStatus(204);
 }
 
@@ -230,6 +234,51 @@ void _postConfig(Request &req, Response &res)
   res.sendStatus(204);
 }
 
+void _getOta(Request &req, Response &res)
+{
+  res.set("Content-Type", "text/html");
+  res.print(OTA_HTML);
+}
+
+void _postOta(Request &req, Response &res)
+{
+  int contentLength = req.left();
+
+  if (strcmp(req.get("Expect"), "100-continue") == 0)
+  {
+    res.status(100);
+  }
+
+  if (!Update.begin(contentLength))
+  {
+    res.status(500);
+    return Update.printError(req);
+  }
+
+  uint32_t start = millis();
+  while (!req.available() && (millis() - start <= 5000)) {}
+
+  if (!req.available())
+  {
+    return res.sendStatus(408);
+  }
+
+  if (Update.writeStream(req) != contentLength)
+  {
+    res.status(400);
+    return Update.printError(req);
+  }
+
+  if (!Update.end(true))
+  {
+    res.status(500);
+    return Update.printError(req);
+  }
+
+  restart = true;
+  res.sendStatus(204);
+}
+
 OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
 {
   _apiMqtt = &mqtt;
@@ -279,7 +328,10 @@ void OXRS_API::checkWifi(WiFiClient * client)
 }
 
 void OXRS_API::_initialiseRestApi(void)
-{  
+{
+  // pre-define the headers we are interested in
+  _api.header("Expect", expectHeader, 20);
+
   _api.get("/", &_getBootstrap);
 
   _api.post("/restart", &_postRestart);
@@ -290,6 +342,9 @@ void OXRS_API::_initialiseRestApi(void)
 
   _api.get("/config", &_getConfig);
   _api.post("/config", &_postConfig);
+
+  _api.get("/ota", &_getOta);
+  _api.post("/ota", &_postOta);
 }
 
 void OXRS_API::_checkRestart(void)
