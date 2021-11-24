@@ -17,6 +17,7 @@
 #else
 #include <WiFi.h>
 #include <SPIFFS.h>
+#include <Update.h>
 #endif
 
 class OXRS_API

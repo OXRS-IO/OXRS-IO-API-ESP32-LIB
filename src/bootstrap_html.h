@@ -4,14 +4,12 @@
 const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
-
 <head>
   <title>OXRS Config</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="expires" content="0">
 
   <style>
-
     body { padding: 0; margin: 0; font-family: Arial; }
     * { box-sizing: border-box; border-collapse: collapse; }
 
@@ -48,6 +46,8 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
 <body onload="handleBodyLoad()">
 
 <form id="mqtt-form">
+
+  <h1>OXRS MQTT Config</h1>
 
   <div id="state-text">LOADING...</div>
 
