@@ -15,9 +15,6 @@ static const char * CONFIG_FILENAME = "/config.json";
 
 OXRS_MQTT * _apiMqtt;
 
-// Expect header buffer
-char expectHeader[20] {};
-
 // Flag used to trigger a restart
 boolean restart = false;
 
@@ -244,11 +241,6 @@ void _postOta(Request &req, Response &res)
 {
   int contentLength = req.left();
 
-  if (strcmp(req.get("Expect"), "100-continue") == 0)
-  {
-    res.status(100);
-  }
-
   if (!Update.begin(contentLength))
   {
     res.status(500);
@@ -329,9 +321,6 @@ void OXRS_API::checkWifi(WiFiClient * client)
 
 void OXRS_API::_initialiseRestApi(void)
 {
-  // pre-define the headers we are interested in
-  _api.header("Expect", expectHeader, 20);
-
   _api.get("/", &_getBootstrap);
 
   _api.post("/restart", &_postRestart);
