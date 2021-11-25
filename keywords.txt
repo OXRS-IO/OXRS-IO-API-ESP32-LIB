@@ -9,7 +9,7 @@ OXRS_API	KEYWORD1
 #######################################
 
 begin			KEYWORD2
-setFirmware	KEYWORD2
+setFirmware		KEYWORD2
 checkEthernet		KEYWORD2
 checkWifi		KEYWORD2
 
