@@ -13,7 +13,14 @@ static const char * MQTT_FILENAME = "/mqtt.json";
 // Filename where config is persisted on the file system
 static const char * CONFIG_FILENAME = "/config.json";
 
+// Pointer to the MQTT lib so we can get/set config
 OXRS_MQTT * _apiMqtt;
+
+// Optional firmware details
+const char * _apiFwName;
+const char * _apiFwShortName;
+const char * _apiFwMaker;
+const char * _apiFwVersion;
 
 // Flag used to trigger a restart
 boolean restart = false;
@@ -126,6 +133,25 @@ void _getBootstrap(Request &req, Response &res)
 {
   res.set("Content-Type", "text/html");
   res.print(BOOTSTRAP_HTML);
+}
+
+void _getFirmware(Request &req, Response &res)
+{
+  if (_apiFwName == NULL)
+  {
+    res.sendStatus(404);
+    return;
+  }
+
+  DynamicJsonDocument json(256);
+  
+  json["name"] = _apiFwName;
+  json["shortName"] = _apiFwShortName;
+  json["maker"] = _apiFwMaker;
+  json["version"] = _apiFwVersion;
+  
+  res.set("Content-Type", "application/json");
+  serializeJson(json, res);
 }
 
 void _postRestart(Request &req, Response &res)
@@ -299,6 +325,14 @@ void OXRS_API::begin()
   _initialiseRestApi();
 }
 
+void OXRS_API::setFirmware(const char * fwName, const char * fwShortName, const char * fwMaker, const char * fwVersion)
+{
+  _apiFwName      = fwName;
+  _apiFwShortName = fwShortName;
+  _apiFwMaker     = fwMaker;
+  _apiFwVersion   = fwVersion;
+}
+
 void OXRS_API::checkEthernet(EthernetClient * client)
 {
   _checkRestart();
@@ -322,6 +356,7 @@ void OXRS_API::checkWifi(WiFiClient * client)
 void OXRS_API::_initialiseRestApi(void)
 {
   _api.get("/", &_getBootstrap);
+  _api.get("/firmware", &_getFirmware);
 
   _api.post("/restart", &_postRestart);
   _api.post("/factoryReset", &_postFactoryReset);

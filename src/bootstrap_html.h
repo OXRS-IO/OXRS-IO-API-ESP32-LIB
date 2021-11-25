@@ -5,7 +5,7 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
-  <title>OXRS Config</title>
+  <title>OXRS MQTT Config</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="expires" content="0">
 
@@ -26,12 +26,13 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
     #restart { background-color: darkorange; }
     #factoryReset { background-color: darkred; }
 
-    #state-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+    #fw-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+    #mqtt-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
 
     @media only screen and (min-width: 768px) {
       form { padding: 0; margin: 0 auto; max-width: 40rem; }
-      label { display: inline-block; width: 49%; }
-      input { display: inline-block; width: 49%; }
+      label { display: inline-block; width: 24%; }
+      input { display: inline-block; width: 74%; }
       button { flex-grow: 1; }
       .btns { display: flex; flex-direction: row; gap: 1rem; }
     }
@@ -45,13 +46,31 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
 
 <body onload="handleBodyLoad()">
 
-<form id="mqtt-form">
+<form id="fw-form">
 
   <h1>OXRS MQTT Config</h1>
 
-  <div id="state-text">LOADING...</div>
+  <div id="fw-text">FIRMWARE</div>
 
-  <label for="mqtt-broker">Broker host:</label>
+  <label for="fw-name">Name:</label>
+  <input type="text" id="fw-name" disabled>
+
+  <label for="fw-shortname">Short Name:</label>
+  <input type="text" id="fw-shortname" disabled>
+
+  <label for="fw-maker">Maker:</label>
+  <input type="text" id="fw-maker" disabled>
+
+  <label for="fw-version">Version:</label>
+  <input type="text" id="fw-version" disabled>
+
+</form>
+
+<form id="mqtt-form">
+
+  <div id="mqtt-text">LOADING...</div>
+
+  <label for="mqtt-broker">Broker Host:</label>
   <input type="text" name="broker" id="mqtt-broker" required>
 
   <label for="mqtt-port">Port:</label>
@@ -87,8 +106,8 @@ var updateMqttConnectionStatusTimer;
 function handleError(error)
 {
   // Display the error message in RED
-  document.getElementById("state-text").style.background = "red";
-  document.getElementById("state-text").innerHTML = 'ERR: ' + error.message;
+  document.getElementById("mqtt-text").style.background = "red";
+  document.getElementById("mqtt-text").innerHTML = 'ERR: ' + error.message;
 
   // Stop the connection status timer so our error isn't cleared away
   clearTimeout(updateMqttConnectionStatusTimer);
@@ -108,6 +127,22 @@ function scheduleUpdateMqttConnectionStatus(time)
 
 function handleBodyLoad()
 {
+  fetch('/firmware')
+    .then(response =>
+    {
+      if (!response.ok)
+        return;
+
+      return response.json();
+    })
+    .then(data =>
+    {
+      if ('name' in data)        { document.getElementById('fw-name').value = data.name; }
+      if ('shortName' in data)   { document.getElementById('fw-shortname').value = data.shortName; }
+      if ('maker' in data)       { document.getElementById('fw-maker').value = data.maker; }
+      if ('version' in data)     { document.getElementById('fw-version').value = data.version; }
+    });
+
   fetch('/mqtt')
     .then(response =>
     {
@@ -133,7 +168,7 @@ function handleBodyLoad()
     {
       handleError(error);
       return false;
-    })
+    });
 
   // Initial connection status check
   scheduleUpdateMqttConnectionStatus(0);
@@ -275,13 +310,13 @@ function setMqttConnectionStatus(connected)
 {
   if (connected === true)
   {
-    document.getElementById("state-text").style.background = "green";
-    document.getElementById("state-text").innerHTML = "MQTT CONNECTED";
+    document.getElementById("mqtt-text").style.background = "green";
+    document.getElementById("mqtt-text").innerHTML = "MQTT CONNECTED";
   }
   else
   {
-    document.getElementById("state-text").style.background = "orange";
-    document.getElementById("state-text").innerHTML = "MQTT DISCONNECTED";
+    document.getElementById("mqtt-text").style.background = "orange";
+    document.getElementById("mqtt-text").innerHTML = "MQTT DISCONNECTED";
   }
 
   document.getElementById("submit").removeAttribute("disabled");
@@ -294,8 +329,8 @@ function setMqttConnectionStatus(connected)
 
 function setMqttConnectionOffline()
 {
-  document.getElementById("state-text").style.background = "red";
-  document.getElementById("state-text").innerHTML = "OFFLINE";
+  document.getElementById("mqtt-text").style.background = "red";
+  document.getElementById("mqtt-text").innerHTML = "OFFLINE";
 
   document.getElementById("submit").setAttribute("disabled", true);
   document.getElementById("restart").setAttribute("disabled", true);
