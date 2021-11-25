@@ -27,7 +27,8 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
 
     #submit { background-color: olivedrab; }
 
-    #state-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+    #fw-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+    #ota-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
 
     @media only screen and (min-width: 768px) {
       form { padding: 0; margin: 0 auto; max-width: 40rem; }
@@ -41,20 +42,63 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
     }
   </style>
 </head>
-<body>
-<form id="ota-form" enctype="multipart/form-data" action="/ota">
+
+<body onload="handleBodyLoad()">
+
+<form id="fw-form">
+
   <h1>OXRS OTA Update</h1>
 
-  <div id="state-text">READY</div>
+  <div id="fw-text">FIRMWARE</div>
 
-  <label for="ota-file">Firmware binary:</label>
+  <label for="fw-name">Name:</label>
+  <input type="text" id="fw-name" disabled>
+
+  <label for="fw-shortname">Short Name:</label>
+  <input type="text" id="fw-shortname" disabled>
+
+  <label for="fw-maker">Maker:</label>
+  <input type="text" id="fw-maker" disabled>
+
+  <label for="fw-version">Version:</label>
+  <input type="text" id="fw-version" disabled>
+
+</form>
+
+<form id="ota-form" enctype="multipart/form-data" action="/ota">
+
+  <div id="ota-text">SELECT NEW FIRMWARE</div>
+
+  <label for="ota-file">Firmware Binary:</label>
   <input type="file" name="file" id="ota-file" required>
 
   <div class="btns">
     <button id="submit" type="submit">Upload</button>
   </div>
+
 </form>
+
 <script>
+
+function handleBodyLoad()
+{
+  fetch('/firmware')
+    .then(response =>
+    {
+      if (!response.ok)
+        return;
+
+      return response.json();
+    })
+    .then(data =>
+    {
+      if ('name' in data)        { document.getElementById('fw-name').value = data.name; }
+      if ('shortName' in data)   { document.getElementById('fw-shortname').value = data.shortName; }
+      if ('maker' in data)       { document.getElementById('fw-maker').value = data.maker; }
+      if ('version' in data)     { document.getElementById('fw-version').value = data.version; }
+    });
+}
+
 function handleFormSubmit(event)
 {
   event.preventDefault();
@@ -63,13 +107,13 @@ function handleFormSubmit(event)
   let file = fileInput.files[0];
   if (!file) return false;
 
-  let state = document.getElementById("state-text");  
-  let btn = document.getElementById('submit');
+  let otaText = document.getElementById("ota-text");  
+  let submitBtn = document.getElementById('submit');
 
-  state.style.background = "orange";
-  state.innerHTML = "UPLOADING...";
+  otaText.style.background = "orange";
+  otaText.innerHTML = "UPLOADING...";
   
-  btn.setAttribute("disabled", true);
+  submitBtn.setAttribute("disabled", true);
 
   let request = new XMLHttpRequest();
   request.addEventListener("load", requestComplete);
@@ -80,15 +124,17 @@ function handleFormSubmit(event)
   {    
     if (request.status !== 200 && request.status !== 204) 
     {
-      state.style.background = "red";
-      state.innerHTML = "UPLOAD FAILED";
+      otaText.style.background = "red";
+      otaText.innerHTML = "UPLOAD FAILED";
       
-      btn.removeAttribute("disabled");
+      submitBtn.removeAttribute("disabled");
     }
     else
     {
-      state.style.background = "green";
-      state.innerHTML = "UPLOAD COMPLETE";
+      otaText.style.background = "green";
+      otaText.innerHTML = "UPLOAD COMPLETE - RESTARTING";
+      
+      setTimeout(() => window.location.reload(), 10000);
     }
   }
 
