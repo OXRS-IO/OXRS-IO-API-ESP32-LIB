@@ -26,6 +26,12 @@ class OXRS_API
     OXRS_API(OXRS_MQTT& mqtt);
 
     void begin(void);
+
+    void setFirmware(
+      const char * fwName, 
+      const char * fwShortName, 
+      const char * fwMaker, 
+      const char * fwVersion);
     
     void checkEthernet(EthernetClient * client);
     void checkWifi(WiFiClient * client);
