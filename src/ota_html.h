@@ -53,7 +53,7 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
 
 <form id="fw-form">
 
-  <h1>OXRS OTA Update <a href="/" class="right">Config</a></h1>
+  <h1>OXRS OTA Update <a href="/" class="right">MQTT</a></h1>
 
   <div id="fw-text" class="status-text">FIRMWARE</div>
 
