@@ -19,16 +19,20 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
 
     form { padding: 1rem; }
 
+    .right { float: right; margin-left: 2rem; }
+
     button { display: block; width: 100%; margin-bottom: 1rem; padding: 1rem; border-radius: .4rem; cursor: pointer; font-weight: bold; border: none; }
     input:disabled, button:disabled { cursor: not-allowed; }
 
     input[type="file"]:hover { cursor: pointer; }
     .btns { position: relative; }
 
-    #submit { background-color: olivedrab; }
+    button[type="submit"] { background-color: olivedrab; }
 
-    #fw-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
-    #ota-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+    .status-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+
+    a:link, a:visited { color: #000; }
+    a:hover, a:active, a:focus { color: #0a97d8; }
 
     @media only screen and (min-width: 768px) {
       form { padding: 0; margin: 0 auto; max-width: 40rem; }
@@ -39,6 +43,8 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
     @media (prefers-color-scheme: dark) {
       body { background: #1c1c1c; color: #fff; }
       input { color: #fff; border: 2px solid rgba(255,255,255,0.1); }
+      a:link, a:visited { color: #fff; }
+      a:hover, a:active, a:focus { color: #0a97d8; }
     }
   </style>
 </head>
@@ -47,9 +53,9 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
 
 <form id="fw-form">
 
-  <h1>OXRS OTA Update</h1>
+  <h1>OXRS OTA Update <a href="/" class="right">Config</a></h1>
 
-  <div id="fw-text">FIRMWARE</div>
+  <div id="fw-text" class="status-text">FIRMWARE</div>
 
   <label for="fw-name">Name:</label>
   <input type="text" id="fw-name" disabled>
@@ -67,7 +73,7 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
 
 <form id="ota-form" enctype="multipart/form-data" action="/ota">
 
-  <div id="ota-text">SELECT NEW FIRMWARE</div>
+  <div id="ota-text" class="status-text">SELECT NEW FIRMWARE</div>
 
   <label for="ota-file">Firmware Binary:</label>
   <input type="file" name="file" id="ota-file" required>
@@ -107,12 +113,12 @@ function handleFormSubmit(event)
   let file = fileInput.files[0];
   if (!file) return false;
 
-  let otaText = document.getElementById("ota-text");  
+  let otaText = document.getElementById("ota-text");
   let submitBtn = document.getElementById('submit');
 
   otaText.style.background = "orange";
   otaText.innerHTML = "UPLOADING...";
-  
+
   submitBtn.setAttribute("disabled", true);
 
   let request = new XMLHttpRequest();
@@ -121,19 +127,19 @@ function handleFormSubmit(event)
   request.addEventListener('abort', requestComplete);
 
   function requestComplete(event)
-  {    
-    if (request.status !== 200 && request.status !== 204) 
+  {
+    if (request.status !== 200 && request.status !== 204)
     {
       otaText.style.background = "red";
       otaText.innerHTML = "UPLOAD FAILED";
-      
+
       submitBtn.removeAttribute("disabled");
     }
     else
     {
       otaText.style.background = "green";
       otaText.innerHTML = "UPLOAD COMPLETE - RESTARTING";
-      
+
       setTimeout(() => window.location.reload(), 10000);
     }
   }
@@ -147,6 +153,7 @@ otaForm.addEventListener("submit", handleFormSubmit);
 </script>
 </body>
 </html>
+
 )rawliteral";
 
 #endif

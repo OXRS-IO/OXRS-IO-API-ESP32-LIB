@@ -22,12 +22,16 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
     button { display: block; width: 100%; margin-bottom: 1rem; padding: 1rem; border-radius: .4rem; cursor: pointer; font-weight: bold; border: none; }
     input:disabled, button:disabled { cursor: not-allowed; }
 
+    .right { float: right; margin-left: 2rem; }
+
     #submit { background-color: olivedrab; }
     #restart { background-color: darkorange; }
     #factoryReset { background-color: darkred; }
 
-    #fw-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
-    #mqtt-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+    .status-text { background-color: grey; margin: 1rem 0; padding: .25rem .6rem; border-radius: .4rem; font-weight: bold; text-align: center; }
+
+    a:link, a:visited { color: #000; }
+    a:hover, a:active, a:focus { color: #0a97d8; }
 
     @media only screen and (min-width: 768px) {
       form { padding: 0; margin: 0 auto; max-width: 40rem; }
@@ -40,6 +44,8 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
     @media (prefers-color-scheme: dark) {
       body { background: #1c1c1c; color: #fff; }
       input { color: #fff; border: 2px solid rgba(255,255,255,0.1); }
+      a:link, a:visited { color: #fff; }
+      a:hover, a:active, a:focus { color: #0a97d8; }
     }
   </style>
 </head>
@@ -48,9 +54,9 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
 
 <form id="fw-form">
 
-  <h1>OXRS MQTT Config</h1>
+  <h1>OXRS MQTT Config <a href="/ota" class="right">OTA</a></h1>
 
-  <div id="fw-text">FIRMWARE</div>
+  <div id="fw-text" class="status-text">FIRMWARE</div>
 
   <label for="fw-name">Name:</label>
   <input type="text" id="fw-name" disabled>
@@ -68,7 +74,7 @@ const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
 
 <form id="mqtt-form">
 
-  <div id="mqtt-text">LOADING...</div>
+  <div id="mqtt-text" class="status-text">LOADING...</div>
 
   <label for="mqtt-broker">Broker Host:</label>
   <input type="text" name="broker" id="mqtt-broker" required>
