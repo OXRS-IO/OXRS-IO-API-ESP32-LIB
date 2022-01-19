@@ -213,7 +213,13 @@ void _getMqtt(Request &req, Response &res)
 void _postMqtt(Request &req, Response &res)
 {
   DynamicJsonDocument json(2048);
-  deserializeJson(json, req);
+
+  DeserializationError error = deserializeJson(json, req);
+  if (error) 
+  {
+    res.sendStatus(500);
+    return;
+  }
 
   if (!_writeJson(&json, MQTT_FILENAME))
   {
@@ -244,8 +250,14 @@ void _getConfig(Request &req, Response &res)
 void _postConfig(Request &req, Response &res)
 {
   DynamicJsonDocument json(4096);
-  deserializeJson(json, req);
-  
+
+  DeserializationError error = deserializeJson(json, req);
+  if (error) 
+  {
+    res.sendStatus(500);
+    return;
+  }
+
   if (!_writeJson(&json, CONFIG_FILENAME))
   {
     res.sendStatus(500);
