@@ -20,6 +20,9 @@
 #include <Update.h>
 #endif
 
+// JSON Schema Version
+#define JSON_SCHEMA_VERSION   "http://json-schema.org/draft-07/schema#"
+
 class OXRS_API
 {
   public:

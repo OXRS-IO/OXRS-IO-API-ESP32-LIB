@@ -16,3 +16,5 @@ checkWifi		KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
+
+JSON_SCHEMA_VERSION		LITERAL1
