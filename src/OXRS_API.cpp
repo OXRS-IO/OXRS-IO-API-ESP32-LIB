@@ -16,11 +16,8 @@ static const char * CONFIG_FILENAME = "/config.json";
 // Pointer to the MQTT lib so we can get/set config
 OXRS_MQTT * _apiMqtt;
 
-// Optional firmware details
-const char * _apiFwName;
-const char * _apiFwShortName;
-const char * _apiFwMaker;
-const char * _apiFwVersion;
+// Callback for building the adoption payload
+jsonCallback _apiAdopt;
 
 // Flag used to trigger a restart
 boolean restart = false;
@@ -34,6 +31,45 @@ boolean _mountFS()
 boolean _formatFS()
 {
   return SPIFFS.format();
+}
+
+boolean _readJson(DynamicJsonDocument * json, const char * filename)
+{
+  File file = SPIFFS.open(filename, "r");
+
+  if (!file) 
+    return false;
+  
+  if (file.size() == 0)
+    return false;
+  
+  DeserializationError error = deserializeJson(*json, file);
+  if (error) 
+  {
+    file.close();
+    return false;
+  }
+  
+  file.close();
+  return json->isNull() ? false : true;
+}
+
+boolean _writeJson(DynamicJsonDocument * json, const char * filename)
+{
+  File file = SPIFFS.open(filename, "w");
+
+  if (!file) 
+    return false;
+
+  serializeJson(*json, file);
+
+  file.close();
+  return true;
+}
+
+boolean _deleteFile(const char * filename)
+{
+  return SPIFFS.remove(filename);
 }
 
 void _setMqtt(JsonVariant json)
@@ -90,65 +126,21 @@ void _setConfig(JsonVariant json)
   _apiMqtt->setConfig(json);  
 }
 
-boolean _readJson(DynamicJsonDocument * json, const char * filename)
-{
-  File file = SPIFFS.open(filename, "r");
-
-  if (!file) 
-    return false;
-  
-  if (file.size() == 0)
-    return false;
-  
-  DeserializationError error = deserializeJson(*json, file);
-  if (error) 
-  {
-    file.close();
-    return false;
-  }
-  
-  file.close();
-  return json->isNull() ? false : true;
-}
-
-boolean _writeJson(DynamicJsonDocument * json, const char * filename)
-{
-  File file = SPIFFS.open(filename, "w");
-
-  if (!file) 
-    return false;
-
-  serializeJson(*json, file);
-
-  file.close();
-  return true;
-}
-
-boolean _deleteFile(const char * filename)
-{
-  return SPIFFS.remove(filename);
-}
-
+/* API endpoint handlers */
 void _getBootstrap(Request &req, Response &res)
 {
   res.set("Content-Type", "text/html");
   res.print(BOOTSTRAP_HTML);
 }
 
-void _getFirmware(Request &req, Response &res)
+void _getAdopt(Request &req, Response &res)
 {
-  if (_apiFwName == NULL)
-  {
-    res.sendStatus(404);
-    return;
-  }
+  DynamicJsonDocument json(JSON_ADOPT_MAX_SIZE);
 
-  DynamicJsonDocument json(256);
-  
-  json["name"] = _apiFwName;
-  json["shortName"] = _apiFwShortName;
-  json["maker"] = _apiFwMaker;
-  json["version"] = _apiFwVersion;
+  if (_apiAdopt)
+  { 
+    _apiAdopt(json.as<JsonVariant>());
+  }
   
   res.set("Content-Type", "application/json");
   serializeJson(json, res);
@@ -174,7 +166,7 @@ void _postFactoryReset(Request &req, Response &res)
 
 void _getMqtt(Request &req, Response &res)
 {
-  DynamicJsonDocument json(2048);  
+  DynamicJsonDocument json(JSON_MQTT_MAX_SIZE);  
 
   if (!_readJson(&json, MQTT_FILENAME))
   {
@@ -212,7 +204,7 @@ void _getMqtt(Request &req, Response &res)
 
 void _postMqtt(Request &req, Response &res)
 {
-  DynamicJsonDocument json(2048);
+  DynamicJsonDocument json(JSON_MQTT_MAX_SIZE);
 
   DeserializationError error = deserializeJson(json, req);
   if (error) 
@@ -235,7 +227,7 @@ void _postMqtt(Request &req, Response &res)
 
 void _getConfig(Request &req, Response &res)
 {
-  DynamicJsonDocument json(4096);
+  DynamicJsonDocument json(JSON_CONFIG_MAX_SIZE);
   
   if (!_readJson(&json, CONFIG_FILENAME))
   {
@@ -249,7 +241,7 @@ void _getConfig(Request &req, Response &res)
 
 void _postConfig(Request &req, Response &res)
 {
-  DynamicJsonDocument json(4096);
+  DynamicJsonDocument json(JSON_CONFIG_MAX_SIZE);
 
   DeserializationError error = deserializeJson(json, req);
   if (error) 
@@ -322,27 +314,36 @@ void OXRS_API::begin()
     _mountFS();
   }
 
-  DynamicJsonDocument json(4096);
+  DynamicJsonDocument mqtt(JSON_MQTT_MAX_SIZE);
 
-  if (_readJson(&json, MQTT_FILENAME))
+  if (_readJson(&mqtt, MQTT_FILENAME))
   {
-    _setMqtt(json.as<JsonVariant>());
+    _setMqtt(mqtt.as<JsonVariant>());
   }
   
-  if (_readJson(&json, CONFIG_FILENAME))
+  DynamicJsonDocument config(JSON_CONFIG_MAX_SIZE);
+
+  if (_readJson(&config, CONFIG_FILENAME))
   {
-    _setConfig(json.as<JsonVariant>());
+    _setConfig(config.as<JsonVariant>());
   }
   
   _initialiseRestApi();
 }
 
-void OXRS_API::setFirmware(const char * fwName, const char * fwShortName, const char * fwMaker, const char * fwVersion)
+void OXRS_API::onAdopt(jsonCallback callback)
 {
-  _apiFwName      = fwName;
-  _apiFwShortName = fwShortName;
-  _apiFwMaker     = fwMaker;
-  _apiFwVersion   = fwVersion;
+  _apiAdopt = callback;
+}
+
+JsonVariant OXRS_API::getAdopt(JsonVariant json)
+{
+  if (_apiAdopt)
+  { 
+    _apiAdopt(json);
+  }
+  
+  return json;
 }
 
 void OXRS_API::checkEthernet(EthernetClient * client)
@@ -368,7 +369,7 @@ void OXRS_API::checkWifi(WiFiClient * client)
 void OXRS_API::_initialiseRestApi(void)
 {
   _api.get("/", &_getBootstrap);
-  _api.get("/firmware", &_getFirmware);
+  _api.get("/adopt", &_getAdopt);
 
   _api.post("/restart", &_postRestart);
   _api.post("/factoryReset", &_postFactoryReset);

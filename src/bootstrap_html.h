@@ -133,7 +133,7 @@ function scheduleUpdateMqttConnectionStatus(time)
 
 function handleBodyLoad()
 {
-  fetch('/firmware')
+  fetch('/adopt')
     .then(response =>
     {
       if (!response.ok)
@@ -143,10 +143,15 @@ function handleBodyLoad()
     })
     .then(data =>
     {
-      if ('name' in data)        { document.getElementById('fw-name').value = data.name; }
-      if ('shortName' in data)   { document.getElementById('fw-shortname').value = data.shortName; }
-      if ('maker' in data)       { document.getElementById('fw-maker').value = data.maker; }
-      if ('version' in data)     { document.getElementById('fw-version').value = data.version; }
+      if ('firmware' in data)
+      {
+        let firmware = data.firmware;
+        
+        if ('name' in firmware)      { document.getElementById('fw-name').value = firmware.name; }
+        if ('shortName' in firmware) { document.getElementById('fw-shortname').value = firmware.shortName; }
+        if ('maker' in firmware)     { document.getElementById('fw-maker').value = firmware.maker; }
+        if ('version' in firmware)   { document.getElementById('fw-version').value = firmware.version; }
+      }
     });
 
   fetch('/mqtt')
