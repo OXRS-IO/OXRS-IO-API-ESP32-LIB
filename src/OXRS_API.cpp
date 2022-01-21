@@ -136,7 +136,7 @@ void _getBootstrap(Request &req, Response &res)
 void _getAdopt(Request &req, Response &res)
 {
   DynamicJsonDocument json(JSON_ADOPT_MAX_SIZE);
-  
+
   if (_apiAdopt)
   { 
     _apiAdopt(json.as<JsonVariant>());
@@ -336,16 +336,14 @@ void OXRS_API::onAdopt(jsonCallback callback)
   _apiAdopt = callback;
 }
 
-JsonVariant OXRS_API::getAdopt()
+JsonVariant OXRS_API::getAdopt(JsonVariant json)
 {
-  DynamicJsonDocument json(JSON_ADOPT_MAX_SIZE);
-  
   if (_apiAdopt)
   { 
-    _apiAdopt(json.as<JsonVariant>());
+    _apiAdopt(json);
   }
   
-  return json.as<JsonVariant>();
+  return json;
 }
 
 void OXRS_API::checkEthernet(EthernetClient * client)

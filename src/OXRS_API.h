@@ -26,7 +26,7 @@
 // JSON payload maximum sizes
 #define JSON_MQTT_MAX_SIZE    2048
 #define JSON_CONFIG_MAX_SIZE  16384
-#define JSON_ADOPT_MAX_SIZE   8192
+#define JSON_ADOPT_MAX_SIZE   4096
 
 class OXRS_API
 {
@@ -39,7 +39,7 @@ class OXRS_API
     void checkWifi(WiFiClient * client);
 
     void onAdopt(jsonCallback);
-    JsonVariant getAdopt(void);
+    JsonVariant getAdopt(JsonVariant json);
 
   private:
     Application _api;
