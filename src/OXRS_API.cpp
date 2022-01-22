@@ -128,6 +128,11 @@ void _setConfig(JsonVariant json)
   _apiMqtt->setConfig(json);  
 }
 
+void _setCommand(JsonVariant json)
+{
+  _apiMqtt->setCommand(json);  
+}
+
 /* Application endpoint handlers */
 void _getIndex(Request &req, Response &res)
 {
@@ -288,7 +293,21 @@ void _postApiConfig(Request &req, Response &res)
   }
 
   _setConfig(json.as<JsonVariant>());
+  res.sendStatus(204);
+}
 
+void _postApiCommand(Request &req, Response &res)
+{
+  DynamicJsonDocument json(JSON_COMMAND_MAX_SIZE);
+
+  DeserializationError error = deserializeJson(json, req);
+  if (error) 
+  {
+    res.sendStatus(500);
+    return;
+  }
+
+  _setCommand(json.as<JsonVariant>());
   res.sendStatus(204);
 }
 
@@ -400,6 +419,8 @@ void OXRS_API::_initialiseRestApi(void)
 
   _api.get("/config", &_getApiConfig);
   _api.post("/config", &_postApiConfig);
+
+  _api.post("/command", &_postApiCommand);
 
   _api.post("/restart", &_postApiRestart);
   _api.post("/factoryReset", &_postApiFactoryReset);
