@@ -42,7 +42,8 @@ class OXRS_API
     JsonVariant getAdopt(JsonVariant json);
 
   private:
-    Application _api;
+    Application _app;
+    Router _api;
 
     void _initialiseRestApi(void);
     void _checkRestart(void);

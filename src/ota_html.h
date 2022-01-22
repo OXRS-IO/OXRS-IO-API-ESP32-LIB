@@ -88,7 +88,7 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(
 
 function handleBodyLoad()
 {
-  fetch('/adopt')
+  fetch('/api/adopt')
     .then(response =>
     {
       if (!response.ok)

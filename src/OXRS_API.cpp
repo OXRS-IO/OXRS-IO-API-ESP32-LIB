@@ -4,7 +4,9 @@
 
 #include "Arduino.h"
 #include "OXRS_API.h"
-#include "bootstrap_html.h"
+
+// Embedded HTML
+#include "index_html.h"
 #include "ota_html.h"
 
 // Filename where MQTT connection properties are persisted on the file system
@@ -126,14 +128,61 @@ void _setConfig(JsonVariant json)
   _apiMqtt->setConfig(json);  
 }
 
-/* API endpoint handlers */
-void _getBootstrap(Request &req, Response &res)
+/* Application endpoint handlers */
+void _getIndex(Request &req, Response &res)
 {
   res.set("Content-Type", "text/html");
-  res.print(BOOTSTRAP_HTML);
+  res.print(INDEX_HTML);
 }
 
-void _getAdopt(Request &req, Response &res)
+void _getOta(Request &req, Response &res)
+{
+  res.set("Content-Type", "text/html");
+  res.print(OTA_HTML);
+}
+
+void _postOta(Request &req, Response &res)
+{
+  int contentLength = req.left();
+
+  if (!Update.begin(contentLength))
+  {
+    res.status(500);
+    return Update.printError(req);
+  }
+
+  uint32_t start = millis();
+  while (!req.available() && (millis() - start <= 5000)) {}
+
+  if (!req.available())
+  {
+    return res.sendStatus(408);
+  }
+
+  if (Update.writeStream(req) != contentLength)
+  {
+    res.status(400);
+    return Update.printError(req);
+  }
+
+  if (!Update.end(true))
+  {
+    res.status(500);
+    return Update.printError(req);
+  }
+
+  restart = true;
+  res.sendStatus(204);
+}
+
+/* API middleware handlers */
+void _apiCors(Request &req, Response &res)
+{
+  res.set("Access-Control-Allow-Origin", "*");
+}
+
+/* API endpoint handlers */
+void _getApiAdopt(Request &req, Response &res)
 {
   DynamicJsonDocument json(JSON_ADOPT_MAX_SIZE);
 
@@ -146,25 +195,7 @@ void _getAdopt(Request &req, Response &res)
   serializeJson(json, res);
 }
 
-void _postRestart(Request &req, Response &res)
-{
-  restart = true;
-  res.sendStatus(204);
-}
-
-void _postFactoryReset(Request &req, Response &res)
-{
-  if (!_formatFS())
-  {
-    res.sendStatus(500);
-    return;
-  }
-
-  restart = true;
-  res.sendStatus(204);
-}
-
-void _getMqtt(Request &req, Response &res)
+void _getApiMqtt(Request &req, Response &res)
 {
   DynamicJsonDocument json(JSON_MQTT_MAX_SIZE);  
 
@@ -202,7 +233,7 @@ void _getMqtt(Request &req, Response &res)
   serializeJson(json, res);
 }
 
-void _postMqtt(Request &req, Response &res)
+void _postApiMqtt(Request &req, Response &res)
 {
   DynamicJsonDocument json(JSON_MQTT_MAX_SIZE);
 
@@ -225,7 +256,7 @@ void _postMqtt(Request &req, Response &res)
   res.sendStatus(204);
 }
 
-void _getConfig(Request &req, Response &res)
+void _getApiConfig(Request &req, Response &res)
 {
   DynamicJsonDocument json(JSON_CONFIG_MAX_SIZE);
   
@@ -239,7 +270,7 @@ void _getConfig(Request &req, Response &res)
   serializeJson(json, res);
 }
 
-void _postConfig(Request &req, Response &res)
+void _postApiConfig(Request &req, Response &res)
 {
   DynamicJsonDocument json(JSON_CONFIG_MAX_SIZE);
 
@@ -261,40 +292,18 @@ void _postConfig(Request &req, Response &res)
   res.sendStatus(204);
 }
 
-void _getOta(Request &req, Response &res)
+void _postApiRestart(Request &req, Response &res)
 {
-  res.set("Content-Type", "text/html");
-  res.print(OTA_HTML);
+  restart = true;
+  res.sendStatus(204);
 }
 
-void _postOta(Request &req, Response &res)
+void _postApiFactoryReset(Request &req, Response &res)
 {
-  int contentLength = req.left();
-
-  if (!Update.begin(contentLength))
+  if (!_formatFS())
   {
-    res.status(500);
-    return Update.printError(req);
-  }
-
-  uint32_t start = millis();
-  while (!req.available() && (millis() - start <= 5000)) {}
-
-  if (!req.available())
-  {
-    return res.sendStatus(408);
-  }
-
-  if (Update.writeStream(req) != contentLength)
-  {
-    res.status(400);
-    return Update.printError(req);
-  }
-
-  if (!Update.end(true))
-  {
-    res.status(500);
-    return Update.printError(req);
+    res.sendStatus(500);
+    return;
   }
 
   restart = true;
@@ -351,7 +360,7 @@ void OXRS_API::checkEthernet(EthernetClient * client)
   _checkRestart();
   
   if (client->connected()) {
-    _api.process(client);
+    _app.process(client);
     client->stop();
   }    
 }
@@ -361,27 +370,39 @@ void OXRS_API::checkWifi(WiFiClient * client)
   _checkRestart();
 
   if (client->connected()) {
-    _api.process(client);
+    _app.process(client);
     client->stop();
   }    
 }
 
 void OXRS_API::_initialiseRestApi(void)
 {
-  _api.get("/", &_getBootstrap);
-  _api.get("/adopt", &_getAdopt);
+  // application endpoints
+  _app.get("/", &_getIndex);
+  
+  _app.get("/ota", &_getOta);
+  _app.post("/ota", &_postOta);
 
-  _api.post("/restart", &_postRestart);
-  _api.post("/factoryReset", &_postFactoryReset);
+  // /api router
+  _app.use("/api", &_api);
+  
+  // enable cors for all api requests
+  _api.get(&_apiCors);
+  _api.head(&_apiCors);
+  _api.options(&_apiCors);
+  _api.post(&_apiCors);
 
-  _api.get("/mqtt", &_getMqtt);
-  _api.post("/mqtt", &_postMqtt);
+  // api endpoints
+  _api.get("/adopt", &_getApiAdopt);
 
-  _api.get("/config", &_getConfig);
-  _api.post("/config", &_postConfig);
+  _api.get("/mqtt", &_getApiMqtt);
+  _api.post("/mqtt", &_postApiMqtt);
 
-  _api.get("/ota", &_getOta);
-  _api.post("/ota", &_postOta);
+  _api.get("/config", &_getApiConfig);
+  _api.post("/config", &_postApiConfig);
+
+  _api.post("/restart", &_postApiRestart);
+  _api.post("/factoryReset", &_postApiFactoryReset);
 }
 
 void OXRS_API::_checkRestart(void)
