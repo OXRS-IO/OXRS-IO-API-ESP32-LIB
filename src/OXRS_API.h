@@ -26,6 +26,7 @@
 // JSON payload maximum sizes
 #define JSON_MQTT_MAX_SIZE    2048
 #define JSON_CONFIG_MAX_SIZE  16384
+#define JSON_COMMAND_MAX_SIZE 16384
 #define JSON_ADOPT_MAX_SIZE   4096
 
 class OXRS_API
@@ -42,7 +43,8 @@ class OXRS_API
     JsonVariant getAdopt(JsonVariant json);
 
   private:
-    Application _api;
+    Application _app;
+    Router _api;
 
     void _initialiseRestApi(void);
     void _checkRestart(void);

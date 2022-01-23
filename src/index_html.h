@@ -1,7 +1,7 @@
-#ifndef bootstrap_html_h
-#define bootstrap_html_h
+#ifndef index_html_h
+#define index_html_h
 
-const char BOOTSTRAP_HTML[] PROGMEM = R"rawliteral(
+const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
@@ -133,7 +133,7 @@ function scheduleUpdateMqttConnectionStatus(time)
 
 function handleBodyLoad()
 {
-  fetch('/adopt')
+  fetch('/api/adopt')
     .then(response =>
     {
       if (!response.ok)
@@ -154,7 +154,7 @@ function handleBodyLoad()
       }
     });
 
-  fetch('/mqtt')
+  fetch('/api/mqtt')
     .then(response =>
     {
       if (!response.ok)
@@ -212,7 +212,7 @@ function handleFormSubmit(event)
   var formData = new FormData(form);
   var formEntries = Object.fromEntries(formData.entries());
 
-  fetch('/mqtt',
+  fetch('/api/mqtt',
   {
     method: "POST",
     headers: {
@@ -240,7 +240,7 @@ function handleFormRestart()
   if (!confirm('Are you sure you want to restart this device?'))
     return false;
 
-  fetch('/restart',
+  fetch('/api/restart',
   {
     method: "POST",
     headers: {
@@ -267,7 +267,7 @@ function handleFormFactoryReset()
   if (!confirm('Are you sure you want to factory reset this device?'))
     return false;
 
-  fetch('/factoryReset',
+  fetch('/api/factoryReset',
   {
     method: "POST",
     headers: {
@@ -294,7 +294,7 @@ function handleFormFactoryReset()
 
 function checkMqttConnectionStatus()
 {
-  fetch('/mqtt')
+  fetch('/api/mqtt')
     .then(response =>
     {
       if (!response.ok)
