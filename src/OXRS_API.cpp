@@ -267,7 +267,7 @@ void _getApiConfig(Request &req, Response &res)
   
   if (!_readJson(&json, CONFIG_FILENAME))
   {
-    res.sendStatus(404);
+    res.sendStatus(204);
     return;
   }
 
