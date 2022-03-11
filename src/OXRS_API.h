@@ -33,6 +33,8 @@ class OXRS_API
 {
   public:
     OXRS_API(OXRS_MQTT& mqtt);
+  
+    void wifiManager(void);
 
     void begin(void);
     
