@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include <aWOT.h>
 #include <Ethernet.h>
+#include "WiFiManager.h"
 
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
