@@ -11,6 +11,9 @@ static const char * MQTT_FILENAME = "/mqtt.json";
 // Filename where config is persisted on the file system
 static const char * CONFIG_FILENAME = "/config.json";
 
+// Pointer to the WiFiManager lib so we can use AP WiFi to set creds
+WiFiManager _apiWm;
+
 // Pointer to the MQTT lib so we can get/set config
 OXRS_MQTT * _apiMqtt;
 
@@ -283,7 +286,8 @@ void _postApiFactoryReset(Request &req, Response &res)
     res.sendStatus(500);
     return;
   }
-
+  
+  _apiWm.resetSettings();
   restart = true;
   res.sendStatus(204);
 }
@@ -325,6 +329,24 @@ void _postApiOta(Request &req, Response &res)
 OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
 {
   _apiMqtt = &mqtt;
+}
+
+void OXRS_API::wifiManager()
+{
+  WiFi.mode(WIFI_STA);
+  _apiWm.setWiFiAutoReconnect(true);
+  bool res;
+  res = _apiWm.autoConnect("OXRS_WiFi", "password"); // password protected ap
+  if (!res)
+  {
+    Serial.println("Failed to connect");
+    // ESP.restart();
+  }
+  else
+  {
+    // if you get here you have connected to the WiFi
+    Serial.println("connected...yeey :)");
+  }
 }
 
 void OXRS_API::begin()
