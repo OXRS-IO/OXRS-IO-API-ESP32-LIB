@@ -31,6 +31,26 @@ boolean _formatFS()
   return SPIFFS.format();
 }
 
+boolean _eraseWifiCreds()
+{
+  // ignore if no creds exist
+  if (WiFi.SSID().length() == 0)
+    return true;
+  
+  // must be STA to disconnect/erase creds
+  #if defined(ESP8266)
+    WiFi.mode(WIFI_STA);
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    WiFi.persistent(false);
+  #else
+    WiFi.enableSTA(true);
+    WiFi.disconnect(true, true);
+  #endif
+  
+  return true;
+}
+
 boolean _readJson(DynamicJsonDocument * json, const char * filename)
 {
   File file = SPIFFS.open(filename, "r");
@@ -276,18 +296,6 @@ void _postApiRestart(Request &req, Response &res)
   res.sendStatus(204);
 }
 
-void _postApiFactoryReset(Request &req, Response &res)
-{
-  if (!_formatFS())
-  {
-    res.sendStatus(500);
-    return;
-  }
-
-  restart = true;
-  res.sendStatus(204);
-}
-
 void _postApiOta(Request &req, Response &res)
 {
   int contentLength = req.left();
@@ -316,6 +324,48 @@ void _postApiOta(Request &req, Response &res)
   {
     res.status(500);
     return Update.printError(req);
+  }
+
+  restart = true;
+  res.sendStatus(204);
+}
+
+void _postApiResetWifi(Request &req, Response &res)
+{
+  if (!_eraseWifiCreds())
+  {
+    res.sendStatus(500);
+    return;
+  }
+  
+  restart = true;
+  res.sendStatus(204);
+}
+
+void _postApiResetConfig(Request &req, Response &res)
+{
+  if (!_formatFS())
+  {
+    res.sendStatus(500);
+    return;
+  }
+
+  restart = true;
+  res.sendStatus(204);
+}
+
+void _postApiFactoryReset(Request &req, Response &res)
+{
+  if (!_eraseWifiCreds())
+  {
+    res.sendStatus(500);
+    return;
+  }
+
+  if (!_formatFS())
+  {
+    res.sendStatus(500);
+    return;
   }
 
   restart = true;
@@ -412,8 +462,11 @@ void OXRS_API::_initialiseRestApi(void)
   _api.post("/command", &_postApiCommand);
 
   _api.post("/restart", &_postApiRestart);
-  _api.post("/factoryReset", &_postApiFactoryReset);
   _api.post("/ota", &_postApiOta);
+
+  _api.post("/resetWifi", &_postApiResetWifi);
+  _api.post("/resetConfig", &_postApiResetConfig);
+  _api.post("/factoryReset", &_postApiFactoryReset);
 }
 
 void OXRS_API::_checkRestart(void)
