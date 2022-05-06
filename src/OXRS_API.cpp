@@ -402,6 +402,17 @@ void OXRS_API::begin()
   _initialiseRestApi();
 }
 
+void OXRS_API::loop(Client * client)
+{
+  _checkRestart();
+  
+  if (client->connected())
+  {
+    _app.process(client);
+    client->stop();
+  }    
+}
+
 void OXRS_API::onAdopt(jsonCallback callback)
 {
   _apiAdopt = callback;
@@ -415,28 +426,6 @@ JsonVariant OXRS_API::getAdopt(JsonVariant json)
   }
   
   return json;
-}
-
-void OXRS_API::checkEthernet(EthernetClient * client)
-{
-  _checkRestart();
-  
-  if (client->connected())
-  {
-    _app.process(client);
-    client->stop();
-  }    
-}
-
-void OXRS_API::checkWifi(WiFiClient * client)
-{
-  _checkRestart();
-
-  if (client->connected())
-  {
-    _app.process(client);
-    client->stop();
-  }    
 }
 
 void OXRS_API::_initialiseRestApi(void)

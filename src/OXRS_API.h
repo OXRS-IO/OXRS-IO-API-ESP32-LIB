@@ -8,7 +8,7 @@
 #include <OXRS_MQTT.h>
 #include <ArduinoJson.h>
 #include <aWOT.h>
-#include <Ethernet.h>
+#include <Client.h>
 
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
@@ -35,9 +35,7 @@ class OXRS_API
     OXRS_API(OXRS_MQTT& mqtt);
 
     void begin(void);
-    
-    void checkEthernet(EthernetClient * client);
-    void checkWifi(WiFiClient * client);
+    void loop(Client * client);
 
     void onAdopt(jsonCallback);
     JsonVariant getAdopt(JsonVariant json);
