@@ -5,6 +5,8 @@
 #include "Arduino.h"
 #include "OXRS_API.h"
 
+extern void makeSnapShot(uint8_t **bufferPtr, size_t *bufferSize);
+
 // Filename where MQTT connection properties are persisted on the file system
 static const char * MQTT_FILENAME = "/mqtt.json";
 
@@ -372,6 +374,16 @@ void _postApiFactoryReset(Request &req, Response &res)
   res.sendStatus(204);
 }
 
+// download snapshot from screen
+void _getApiSnapshot(Request &req, Response &res)
+{
+  uint8_t *bufferPtr;
+  size_t bufferSize;
+  makeSnapShot(&bufferPtr, &bufferSize);
+  res.set("Content-Type", "application/octet-stream");
+  res.write(bufferPtr, bufferSize);
+}
+
 OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
 {
   _apiMqtt = &mqtt;
@@ -456,6 +468,8 @@ void OXRS_API::_initialiseRestApi(void)
   _api.post("/resetWifi", &_postApiResetWifi);
   _api.post("/resetConfig", &_postApiResetConfig);
   _api.post("/factoryReset", &_postApiFactoryReset);
+
+  _api.get("/snapshot.bin", &_getApiSnapshot);
 }
 
 void OXRS_API::_checkRestart(void)
