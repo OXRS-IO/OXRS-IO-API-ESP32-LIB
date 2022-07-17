@@ -37,6 +37,9 @@ class OXRS_API
     void begin(void);
     void loop(Client * client);
 
+    void get(const char * path, Router::Middleware * middleware);
+    void post(const char * path, Router::Middleware * middleware);
+
     void onAdopt(jsonCallback);
     JsonVariant getAdopt(JsonVariant json);
 
