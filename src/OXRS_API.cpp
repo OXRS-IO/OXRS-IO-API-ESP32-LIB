@@ -413,6 +413,16 @@ void OXRS_API::loop(Client * client)
   }    
 }
 
+void OXRS_API::get(const char * path, Router::Middleware * middleware)
+{
+  _api.get(path, middleware);
+}
+
+void OXRS_API::post(const char * path, Router::Middleware * middleware)
+{
+  _api.post(path, middleware);
+}
+
 void OXRS_API::onAdopt(jsonCallback callback)
 {
   _apiAdopt = callback;
