@@ -25,9 +25,16 @@
 
 // JSON payload maximum sizes
 #define JSON_MQTT_MAX_SIZE    2048
+
+#if defined(ESP8266)
+#define JSON_CONFIG_MAX_SIZE  8192
+#define JSON_COMMAND_MAX_SIZE 8192
+#define JSON_ADOPT_MAX_SIZE   8192
+#else
 #define JSON_CONFIG_MAX_SIZE  16384
 #define JSON_COMMAND_MAX_SIZE 16384
 #define JSON_ADOPT_MAX_SIZE   16384
+#endif
 
 class OXRS_API
 {
