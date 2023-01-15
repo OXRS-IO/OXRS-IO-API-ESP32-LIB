@@ -23,12 +23,12 @@ boolean restart = false;
 /* File system helpers */
 boolean _mountFS()
 {
-  return SPIFFS.begin();
+  return LittleFS.begin();
 }
 
 boolean _formatFS()
 {
-  return SPIFFS.format();
+  return LittleFS.format();
 }
 
 boolean _eraseWifiCreds()
@@ -53,7 +53,7 @@ boolean _eraseWifiCreds()
 
 boolean _readJson(DynamicJsonDocument * json, const char * filename)
 {
-  File file = SPIFFS.open(filename, "r");
+  File file = LittleFS.open(filename, "r");
 
   if (!file) 
     return false;
@@ -74,7 +74,7 @@ boolean _readJson(DynamicJsonDocument * json, const char * filename)
 
 boolean _writeJson(DynamicJsonDocument * json, const char * filename)
 {
-  File file = SPIFFS.open(filename, "w");
+  File file = LittleFS.open(filename, "w");
 
   if (!file) 
     return false;
@@ -87,7 +87,7 @@ boolean _writeJson(DynamicJsonDocument * json, const char * filename)
 
 boolean _deleteFile(const char * filename)
 {
-  return SPIFFS.remove(filename);
+  return LittleFS.remove(filename);
 }
 
 /* MQTT handlers */
