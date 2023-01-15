@@ -9,14 +9,12 @@
 #include <ArduinoJson.h>
 #include <aWOT.h>
 #include <Client.h>
+#include <LittleFS.h>
 
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
-#include <LittleFS.h>
-#define SPIFFS LittleFS
 #else
 #include <WiFi.h>
-#include <SPIFFS.h>
 #include <Update.h>
 #endif
 
