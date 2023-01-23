@@ -5,6 +5,7 @@
 #include "Arduino.h"
 #include "OXRS_API.h"
 
+
 // Filename where MQTT connection properties are persisted on the file system
 static const char * MQTT_FILENAME = "/mqtt.json";
 
@@ -19,6 +20,9 @@ jsonCallback _apiAdopt;
 
 // Flag used to trigger a restart
 boolean restart = false;
+
+// Flag used to trigger wifi disconnect
+boolean disconnect = false;
 
 /* File system helpers */
 boolean _mountFS()
@@ -332,12 +336,7 @@ void _postApiOta(Request &req, Response &res)
 
 void _postApiResetWifi(Request &req, Response &res)
 {
-  if (!_eraseWifiCreds())
-  {
-    res.sendStatus(500);
-    return;
-  }
-  
+  disconnect = true;
   restart = true;
   res.sendStatus(204);
 }
@@ -356,12 +355,8 @@ void _postApiResetConfig(Request &req, Response &res)
 
 void _postApiFactoryReset(Request &req, Response &res)
 {
-  if (!_eraseWifiCreds())
-  {
-    res.sendStatus(500);
-    return;
-  }
-
+  disconnect = true;
+  
   if (!_formatFS())
   {
     res.sendStatus(500);
@@ -404,8 +399,9 @@ void OXRS_API::begin()
 
 void OXRS_API::loop(Client * client)
 {
+  _checkDisconnect();
   _checkRestart();
-  
+
   if (client->connected())
   {
     _app.process(client);
@@ -471,4 +467,12 @@ void OXRS_API::_initialiseRestApi(void)
 void OXRS_API::_checkRestart(void)
 {
   if (restart) { ESP.restart(); }  
+}
+
+void OXRS_API::_checkDisconnect(void)
+{
+  if (disconnect)
+  {
+    _eraseWifiCreds();
+  }
 }

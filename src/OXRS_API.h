@@ -54,6 +54,7 @@ class OXRS_API
 
     void _initialiseRestApi(void);
     void _checkRestart(void);
+    void _checkDisconnect(void);
 };
 
 #endif
