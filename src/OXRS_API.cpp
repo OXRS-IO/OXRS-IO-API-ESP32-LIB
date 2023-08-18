@@ -42,7 +42,7 @@ boolean _eraseWifiCreds()
     return true;
   
   // must be STA to disconnect/erase creds
-  #if defined(ESP8266)
+  #if defined(ESP8266) || defined(RASPBERRYPI_PICO)
     WiFi.mode(WIFI_STA);
     WiFi.persistent(true);
     WiFi.disconnect(true);
@@ -51,7 +51,7 @@ boolean _eraseWifiCreds()
     WiFi.enableSTA(true);
     WiFi.disconnect(true, true);
   #endif
-  
+
   return true;
 }
 
@@ -80,7 +80,7 @@ boolean _writeJson(DynamicJsonDocument * json, const char * filename)
 {
   File file = LittleFS.open(filename, "w");
 
-  if (!file) 
+  if (!file)
     return false;
 
   serializeJson(*json, file);
@@ -406,7 +406,7 @@ void OXRS_API::loop(Client * client)
   {
     _app.process(client);
     client->stop();
-  }    
+  }
 }
 
 void OXRS_API::get(const char * path, Router::Middleware * middleware)
@@ -430,7 +430,7 @@ JsonVariant OXRS_API::getAdopt(JsonVariant json)
   { 
     _apiAdopt(json);
   }
-  
+
   return json;
 }
 
@@ -438,7 +438,7 @@ void OXRS_API::_initialiseRestApi(void)
 {
   // /api router
   _app.use("/api", &_api);
-  
+
   // enable cors for all api requests
   _api.options(&_apiCorsOptions);
   _api.get(&_apiCors);
@@ -466,7 +466,13 @@ void OXRS_API::_initialiseRestApi(void)
 
 void OXRS_API::_checkRestart(void)
 {
-  if (restart) { ESP.restart(); }  
+  if (restart) {
+#if defined(RASPBERRYPI_PICO)
+    rp2040.restart();
+#else
+    ESP.restart();
+#endif
+  }
 }
 
 void OXRS_API::_checkDisconnect(void)

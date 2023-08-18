@@ -15,7 +15,9 @@
 #include <ESP8266WiFi.h>
 #else
 #include <WiFi.h>
+#if !defined(RASPBERRYPI_PICO)
 #include <Update.h>
+#endif
 #endif
 
 // JSON Schema Version
