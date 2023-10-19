@@ -370,6 +370,8 @@ void _postApiFactoryReset(Request &req, Response &res)
 OXRS_API::OXRS_API(OXRS_MQTT& mqtt)
 {
   _apiMqtt = &mqtt;
+  
+  _initialiseRestApi();
 }
 
 void OXRS_API::begin()
@@ -393,8 +395,6 @@ void OXRS_API::begin()
   {
     _setConfig(config.as<JsonVariant>());
   }
-  
-  _initialiseRestApi();
 }
 
 void OXRS_API::loop(Client * client)
