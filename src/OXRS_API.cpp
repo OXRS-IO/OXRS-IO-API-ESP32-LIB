@@ -204,7 +204,7 @@ void _getApiMqtt(Request &req, Response &res)
   // if we are connected then add the various MQTT topics
   if (_apiMqtt->connected())
   {
-    JsonObject topics = json.createNestedObject("topics");
+    JsonObject topics = json["topics"].to<JsonObject>();
     char topic[64];
     
     topics["lwt"] = _apiMqtt->getLwtTopic(topic);
