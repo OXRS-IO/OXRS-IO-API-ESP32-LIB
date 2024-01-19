@@ -23,19 +23,6 @@
 // JSON Schema Version
 #define JSON_SCHEMA_VERSION   "http://json-schema.org/draft-07/schema#"
 
-// JSON payload maximum sizes
-#define JSON_MQTT_MAX_SIZE    2048
-
-#if defined(ESP8266)
-#define JSON_CONFIG_MAX_SIZE  2048
-#define JSON_COMMAND_MAX_SIZE 2048
-#define JSON_ADOPT_MAX_SIZE   2048
-#else
-#define JSON_CONFIG_MAX_SIZE  16384
-#define JSON_COMMAND_MAX_SIZE 16384
-#define JSON_ADOPT_MAX_SIZE   16384
-#endif
-
 class OXRS_API
 {
   public:
