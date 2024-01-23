@@ -55,7 +55,7 @@ boolean _eraseWifiCreds()
   return true;
 }
 
-boolean _readJson(DynamicJsonDocument * json, const char * filename)
+boolean _readJson(JsonDocument * json, const char * filename)
 {
   File file = LittleFS.open(filename, "r");
 
@@ -76,7 +76,7 @@ boolean _readJson(DynamicJsonDocument * json, const char * filename)
   return json->isNull() ? false : true;
 }
 
-boolean _writeJson(DynamicJsonDocument * json, const char * filename)
+boolean _writeJson(JsonDocument * json, const char * filename)
 {
   File file = LittleFS.open(filename, "w");
 
@@ -172,7 +172,7 @@ void _apiCors(Request &req, Response &res)
 /* API endpoint handlers */
 void _getApiAdopt(Request &req, Response &res)
 {
-  DynamicJsonDocument json(JSON_ADOPT_MAX_SIZE);
+  JsonDocument json;
 
   if (_apiAdopt)
   { 
@@ -185,7 +185,7 @@ void _getApiAdopt(Request &req, Response &res)
 
 void _getApiMqtt(Request &req, Response &res)
 {
-  DynamicJsonDocument json(JSON_MQTT_MAX_SIZE);  
+  JsonDocument json;
 
   if (!_readJson(&json, MQTT_FILENAME))
   {
@@ -204,7 +204,7 @@ void _getApiMqtt(Request &req, Response &res)
   // if we are connected then add the various MQTT topics
   if (_apiMqtt->connected())
   {
-    JsonObject topics = json.createNestedObject("topics");
+    JsonObject topics = json["topics"].to<JsonObject>();
     char topic[64];
     
     topics["lwt"] = _apiMqtt->getLwtTopic(topic);
@@ -223,7 +223,7 @@ void _getApiMqtt(Request &req, Response &res)
 
 void _postApiMqtt(Request &req, Response &res)
 {
-  DynamicJsonDocument json(JSON_MQTT_MAX_SIZE);
+  JsonDocument json;
 
   DeserializationError error = deserializeJson(json, req);
   if (error) 
@@ -246,7 +246,7 @@ void _postApiMqtt(Request &req, Response &res)
 
 void _getApiConfig(Request &req, Response &res)
 {
-  DynamicJsonDocument json(JSON_CONFIG_MAX_SIZE);
+  JsonDocument json;
   
   if (!_readJson(&json, CONFIG_FILENAME))
   {
@@ -260,7 +260,7 @@ void _getApiConfig(Request &req, Response &res)
 
 void _postApiConfig(Request &req, Response &res)
 {
-  DynamicJsonDocument json(JSON_CONFIG_MAX_SIZE);
+  JsonDocument json;
 
   DeserializationError error = deserializeJson(json, req);
   if (error) 
@@ -281,7 +281,7 @@ void _postApiConfig(Request &req, Response &res)
 
 void _postApiCommand(Request &req, Response &res)
 {
-  DynamicJsonDocument json(JSON_COMMAND_MAX_SIZE);
+  JsonDocument json;
 
   DeserializationError error = deserializeJson(json, req);
   if (error) 
@@ -382,14 +382,14 @@ void OXRS_API::begin()
     _mountFS();
   }
 
-  DynamicJsonDocument mqtt(JSON_MQTT_MAX_SIZE);
+  JsonDocument mqtt;
 
   if (_readJson(&mqtt, MQTT_FILENAME))
   {
     _setMqtt(mqtt.as<JsonVariant>());
   }
   
-  DynamicJsonDocument config(JSON_CONFIG_MAX_SIZE);
+  JsonDocument config;
 
   if (_readJson(&config, CONFIG_FILENAME))
   {
